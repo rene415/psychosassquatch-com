@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="404 — Psychosassquatch" description="Lost in the woods.">
+  <Nav />
+
+  <main class="grid min-h-dvh place-items-center px-5">
+    <div class="text-center">
+      <p class="font-mono text-xs uppercase tracking-[0.35em] text-sass-ink/40">404</p>
+      <h1 class="mt-3 font-display text-6xl md:text-8xl">You wandered off the trail.</h1>
+      <p class="mt-4 text-sass-ink/60">Sasquatch is over <a href="/" class="text-sass-sauce hover:underline">this way</a>.</p>
+    </div>
+  </main>
+
+  <Footer />
+</Base>

@@ -1,0 +1,46 @@
+---
+const socials = [
+  { href: 'https://open.spotify.com/', label: 'Spotify' },
+  { href: 'https://music.apple.com/', label: 'Apple Music' },
+  { href: 'https://soundcloud.com/', label: 'SoundCloud' },
+  { href: 'https://youtube.com/', label: 'YouTube' },
+  { href: 'https://twitch.tv/', label: 'Twitch' },
+  { href: 'https://instagram.com/', label: 'Instagram' },
+  { href: 'https://facebook.com/', label: 'Facebook' },
+];
+const year = new Date().getFullYear();
+---
+
+<footer class="relative z-10 mt-32 border-t border-sass-ink/10 px-5 py-10 md:px-10">
+  <div class="mx-auto flex max-w-6xl flex-col gap-8 md:flex-row md:items-end md:justify-between">
+    <div>
+      <p class="font-display text-2xl text-sass-ink/90">
+        sasquatch.exe is <span class="text-sass-sauce">always running</span>.
+      </p>
+      <p class="mt-2 max-w-md text-sm text-sass-ink/60">
+        Music that will make you groove. Built in a basement. Lit by a single bulb.
+        Probably also a candle. Definitely a candle.
+      </p>
+    </div>
+
+    <ul class="flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-widest">
+      {socials.map((s) => (
+        <li>
+          <a
+            href={s.href}
+            target="_blank"
+            rel="noopener"
+            class="text-sass-ink/60 hover:text-sass-sauce"
+          >
+            {s.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div class="mx-auto mt-8 flex max-w-6xl items-center justify-between font-mono text-[10px] uppercase tracking-widest text-sass-ink/40">
+    <span>© {year} Rene Ramirez</span>
+    <span>v0.1 — hairy beta</span>
+  </div>
+</footer>

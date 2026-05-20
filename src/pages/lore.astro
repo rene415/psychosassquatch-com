@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="Lore — Psychosassquatch" description="Bio, press kit, origin story (mostly true).">
+  <Nav />
+
+  <main class="px-5 pt-32 md:px-10">
+    <section class="mx-auto max-w-3xl">
+      <p class="font-mono text-xs uppercase tracking-[0.35em] text-sass-ink/50">03 — Lore</p>
+      <h1 class="mt-3 font-display text-5xl md:text-7xl">Mostly true. Occasionally feral.</h1>
+
+      <div class="prose prose-invert mt-10 max-w-none">
+        <p class="text-xl text-sass-ink/85">
+          Psychosassquatch is the music project of Rene Ramirez. It started in a basement,
+          escaped through a vent, and now lives partly online and partly in a JBL speaker
+          duct-taped to a tree.
+        </p>
+
+        <h2 class="mt-12 font-display text-2xl">Press kit</h2>
+        <ul class="mt-2 list-disc pl-5 text-sass-ink/70">
+          <li>Hi-res mascot logo (.png, .svg) — coming soon</li>
+          <li>Press photos — coming soon</li>
+          <li>One-sheet PDF — coming soon</li>
+          <li>Booking / contact — <a class="text-sass-sauce hover:underline" href="mailto:rene@reneramirez.me">rene@reneramirez.me</a></li>
+        </ul>
+
+        <h2 class="mt-12 font-display text-2xl">FAQ (questions nobody asked)</h2>
+        <p class="text-sass-ink/70"><strong class="text-sass-ink">Is Sasquatch real?</strong> Define real.</p>
+        <p class="text-sass-ink/70"><strong class="text-sass-ink">What genre is this?</strong> Yes.</p>
+        <p class="text-sass-ink/70"><strong class="text-sass-ink">Can I book a show?</strong> Yes — email above, attach proof you have a venue and at least one snack.</p>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>

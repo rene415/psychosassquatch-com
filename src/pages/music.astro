@@ -1,0 +1,38 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="Music — Psychosassquatch" description="Releases, B-sides, and stuff that escaped the basement.">
+  <Nav />
+
+  <main class="px-5 pt-32 md:px-10">
+    <section class="mx-auto max-w-6xl">
+      <p class="font-mono text-xs uppercase tracking-[0.35em] text-sass-ink/50">01 — Music</p>
+      <h1 class="mt-3 font-display text-5xl md:text-7xl">Press play, lose track of time.</h1>
+      <p class="mt-6 max-w-xl text-sass-ink/70">
+        This is where the embeds live. Spotify, Bandcamp, SoundCloud, YouTube — all going here once Rene
+        hands me the links. For now imagine a dark grid with cover art the size of a vinyl sleeve.
+      </p>
+
+      <div class="mt-12 grid gap-px overflow-hidden rounded-3xl border border-sass-ink/10 bg-sass-ink/5 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <article class="aspect-square bg-sass-bg p-6">
+            <div class="flex h-full flex-col justify-between">
+              <span class="font-mono text-[10px] uppercase tracking-widest text-sass-ink/40">
+                release · 00{i + 1}
+              </span>
+              <div>
+                <h2 class="font-display text-2xl">Untitled #{i + 1}</h2>
+                <p class="mt-1 text-xs text-sass-ink/50">stream link coming soon</p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>

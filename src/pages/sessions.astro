@@ -1,0 +1,46 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base
+  title="Sessions — Psychosassquatch"
+  description="Interactive jam sessions. Click things, make noise, the sasquatch jams with you."
+>
+  <Nav />
+
+  <main class="px-5 pt-32 md:px-10">
+    <section class="mx-auto max-w-6xl">
+      <p class="font-mono text-xs uppercase tracking-[0.35em] text-sass-ink/50">02 — Sessions</p>
+      <h1 class="mt-3 font-display text-5xl md:text-7xl">Jam with the sasquatch.</h1>
+      <p class="mt-6 max-w-xl text-sass-ink/70">
+        Press a key. Click a pad. The forest hears you. This is going to be a small in-browser
+        sandbox where you trigger Psychosassquatch loops and watch the scene react —
+        Peggy Gou meets Because-Recollection but, you know, hairy.
+      </p>
+
+      <div class="mt-12 rounded-3xl border border-sass-ink/10 bg-gradient-to-br from-sass-bg to-sass-forest/40 p-10">
+        <p class="font-mono text-xs uppercase tracking-widest text-sass-sauce">[work in progress]</p>
+        <p class="mt-4 max-w-prose text-sass-ink/70">
+          Planned: 8 pads mapped to A–L, audio-reactive sasquatch silhouette, BPM lock,
+          shareable URL of your jam. We'll wire this up once we pin down the loop pack.
+        </p>
+
+        <div class="mt-8 grid grid-cols-4 gap-3">
+          {['A','S','D','F','J','K','L',';'].map((k) => (
+            <button
+              class="aspect-square rounded-2xl border border-sass-ink/15 bg-sass-ink/[0.03] font-mono text-2xl uppercase text-sass-ink/70 transition-colors hover:border-sass-sauce hover:text-sass-sauce"
+              disabled
+              aria-label={`pad ${k}`}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
