@@ -22,14 +22,16 @@ const fmt = (iso: string) => {
       role="list"
     >
       {sorted.map((t, idx) => {
-        const isPlaceholder = t.spotifyId.startsWith('PLACEHOLDER');
-        const fallbackArt = `https://i.scdn.co/image/${t.spotifyId}`; // not real; just for the dom — real cover comes via Spotify embed once spotifyId is set
+        const hasRealSpotify = t.spotifyId && !t.spotifyId.startsWith('PLACEHOLDER');
+        const hasLocal = !!t.audioSrc;
+        const playable = hasRealSpotify || hasLocal;
         return (
           <li
             class="track-card group relative shrink-0 snap-center"
             style="width: min(78vmin, 480px);"
             data-track-id={t.spotifyId}
             data-track-title={t.title}
+            data-audio-src={t.audioSrc || ''}
             data-idx={idx}
           >
             <div class="relative aspect-square overflow-hidden rounded-3xl border border-sass-ink/10 bg-sass-fur/20">
@@ -48,31 +50,47 @@ const fmt = (iso: string) => {
               <!-- darken overlay so play button reads -->
               <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-sass-bg/85 via-sass-bg/10 to-transparent"></div>
 
-              <!-- giant play button -->
+              <!-- giant play/pause button -->
               <button
-                class="absolute inset-0 grid place-items-center text-sass-ink transition-transform duration-300 hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sass-sauce"
+                class="play-btn absolute inset-0 grid place-items-center text-sass-ink transition-transform duration-300 hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sass-sauce"
                 aria-label={`Play ${t.title}`}
-                disabled={isPlaceholder}
+                aria-pressed="false"
+                disabled={!playable}
                 data-action="play-track"
               >
                 <span class="grid h-20 w-20 place-items-center rounded-full bg-sass-ink/95 text-sass-bg ring-1 ring-sass-ink/30 transition-colors group-hover:bg-sass-sauce group-hover:text-sass-bg md:h-24 md:w-24">
-                  <svg viewBox="0 0 24 24" class="h-8 w-8 translate-x-[2px]" fill="currentColor" aria-hidden="true">
+                  <svg class="play-icon h-8 w-8 translate-x-[2px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M6 4l14 8-14 8z" />
+                  </svg>
+                  <svg class="pause-icon hidden h-8 w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <rect x="5" y="4" width="5" height="16" rx="1" />
+                    <rect x="14" y="4" width="5" height="16" rx="1" />
                   </svg>
                 </span>
               </button>
 
+              <!-- progress bar (visible while playing local audio) -->
+              <div class="progress-wrap pointer-events-none absolute inset-x-5 bottom-20 hidden">
+                <div class="h-1 overflow-hidden rounded-full bg-sass-ink/15">
+                  <div class="progress-fill h-full w-0 bg-sass-sauce transition-[width] duration-100"></div>
+                </div>
+                <div class="mt-1 flex justify-between font-mono text-[10px] uppercase tracking-widest text-sass-ink/45">
+                  <span class="time-cur">0:00</span>
+                  <span class="time-tot">--:--</span>
+                </div>
+              </div>
+
               <!-- track meta strip -->
               <div class="pointer-events-none absolute inset-x-0 bottom-0 p-5">
                 <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-sass-ink/55">
-                  {fmt(t.releaseDate)}{isPlaceholder ? ' · placeholder' : ''}
+                  {fmt(t.releaseDate)}{!playable ? ' · coming soon' : (hasLocal && !hasRealSpotify ? ' · local preview' : '')}
                 </p>
                 <h3 class="mt-1 font-display text-2xl text-sass-ink md:text-3xl">
                   {t.title}
                 </h3>
               </div>
 
-              <!-- Spotify embed slot (revealed when clicked) -->
+              <!-- Spotify embed slot (revealed when Spotify ID is real) -->
               <div
                 class="embed-slot pointer-events-none absolute inset-0 hidden bg-sass-bg/95 p-6 backdrop-blur-sm"
               ></div>
@@ -172,42 +190,114 @@ const fmt = (iso: string) => {
       else if (e.key === 'ArrowRight') { e.preventDefault(); scrollToIdx(activeIdx() + 1); }
     });
 
-    // ─ play button → swap card content with Spotify embed ────────────────
+    // ─ local-audio player (one shared HTMLAudioElement, hopped between cards) ─
+    const fmtTime = (s: number) => {
+      if (!isFinite(s)) return '--:--';
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    };
+    let currentCard: HTMLElement | null = null;
+    const audio = new Audio();
+    audio.preload = 'metadata';
+
+    function showPause(card: HTMLElement) {
+      card.querySelector('.play-icon')?.classList.add('hidden');
+      card.querySelector('.pause-icon')?.classList.remove('hidden');
+      card.querySelector('.progress-wrap')?.classList.remove('hidden');
+      const btn = card.querySelector<HTMLButtonElement>('button[data-action="play-track"]');
+      if (btn) { btn.setAttribute('aria-pressed', 'true'); btn.setAttribute('aria-label', `Pause ${card.dataset.trackTitle ?? ''}`); }
+    }
+    function showPlay(card: HTMLElement) {
+      card.querySelector('.play-icon')?.classList.remove('hidden');
+      card.querySelector('.pause-icon')?.classList.add('hidden');
+      const btn = card.querySelector<HTMLButtonElement>('button[data-action="play-track"]');
+      if (btn) { btn.setAttribute('aria-pressed', 'false'); btn.setAttribute('aria-label', `Play ${card.dataset.trackTitle ?? ''}`); }
+    }
+    function hideProgress(card: HTMLElement) {
+      card.querySelector('.progress-wrap')?.classList.add('hidden');
+    }
+
+    audio.addEventListener('timeupdate', () => {
+      if (!currentCard) return;
+      const fill = currentCard.querySelector<HTMLElement>('.progress-fill');
+      const cur = currentCard.querySelector<HTMLElement>('.time-cur');
+      const tot = currentCard.querySelector<HTMLElement>('.time-tot');
+      const pct = (audio.currentTime / (audio.duration || 1)) * 100;
+      if (fill) fill.style.width = `${pct.toFixed(2)}%`;
+      if (cur) cur.textContent = fmtTime(audio.currentTime);
+      if (tot) tot.textContent = fmtTime(audio.duration);
+    });
+    audio.addEventListener('ended', () => {
+      if (currentCard) { showPlay(currentCard); hideProgress(currentCard); currentCard = null; }
+    });
+
+    // ─ play button → Spotify embed (if real id) OR local audio playback ───
     rail.addEventListener('click', (e) => {
       const target = e.target as HTMLElement | null;
       const btn = target?.closest<HTMLButtonElement>('button[data-action="play-track"]');
       if (!btn) return;
       const card = btn.closest<HTMLElement>('.track-card');
       if (!card) return;
-      const id = card.dataset.trackId;
-      const slot = card.querySelector<HTMLElement>('.embed-slot');
-      if (!id || !slot) return;
+      const id = card.dataset.trackId || '';
+      const src = card.dataset.audioSrc || '';
+      const hasRealSpotify = id && !id.startsWith('PLACEHOLDER');
 
-      if (id.startsWith('PLACEHOLDER')) {
-        slot.innerHTML = `
-          <div class="flex h-full flex-col items-center justify-center text-center">
-            <p class="font-mono text-[10px] uppercase tracking-widest text-sass-ink/45">no spotify id yet</p>
-            <p class="mt-3 font-display text-xl text-sass-ink/85">drop the real spotifyId in src/data/tracks.ts</p>
-          </div>`;
-      } else if (!slot.querySelector('iframe')) {
-        const iframe = document.createElement('iframe');
-        iframe.src = `https://open.spotify.com/embed/track/${encodeURIComponent(id)}?utm_source=generator&theme=0`;
-        iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
-        iframe.loading = 'lazy';
-        iframe.title = card.dataset.trackTitle || 'Spotify player';
-        iframe.className = 'h-full w-full rounded-2xl border-0';
-        slot.appendChild(iframe);
-      }
-      slot.classList.remove('hidden', 'pointer-events-none');
-      slot.classList.add('pointer-events-auto');
-      // Pause every other card's embed by re-hiding (we don't auto-play but this keeps the UI clean)
-      cards.forEach((c) => {
-        if (c === card) return;
-        const s = c.querySelector<HTMLElement>('.embed-slot');
-        if (s && !s.classList.contains('hidden')) {
-          s.classList.add('hidden', 'pointer-events-none');
-          s.classList.remove('pointer-events-auto');
+      // ── Spotify embed path ──────────────────────────────────────────────
+      if (hasRealSpotify) {
+        const slot = card.querySelector<HTMLElement>('.embed-slot');
+        if (!slot) return;
+        if (!slot.querySelector('iframe')) {
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://open.spotify.com/embed/track/${encodeURIComponent(id)}?utm_source=generator&theme=0`;
+          iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+          iframe.loading = 'lazy';
+          iframe.title = card.dataset.trackTitle || 'Spotify player';
+          iframe.className = 'h-full w-full rounded-2xl border-0';
+          slot.appendChild(iframe);
         }
+        slot.classList.remove('hidden', 'pointer-events-none');
+        slot.classList.add('pointer-events-auto');
+        // hide other slots
+        cards.forEach((c) => {
+          if (c === card) return;
+          const s = c.querySelector<HTMLElement>('.embed-slot');
+          if (s && !s.classList.contains('hidden')) {
+            s.classList.add('hidden', 'pointer-events-none');
+            s.classList.remove('pointer-events-auto');
+          }
+        });
+        return;
+      }
+
+      // ── Local audio path ───────────────────────────────────────────────
+      if (!src) return;
+
+      // Same card → toggle
+      if (currentCard === card) {
+        if (audio.paused) {
+          audio.play().then(() => showPause(card)).catch(() => {});
+        } else {
+          audio.pause();
+          showPlay(card);
+        }
+        return;
+      }
+
+      // Different card → reset previous, switch
+      if (currentCard) {
+        audio.pause();
+        showPlay(currentCard);
+        hideProgress(currentCard);
+        const f = currentCard.querySelector<HTMLElement>('.progress-fill');
+        if (f) f.style.width = '0%';
+      }
+      currentCard = card;
+      audio.src = src;
+      audio.currentTime = 0;
+      audio.play().then(() => showPause(card)).catch((err) => {
+        console.warn('audio play failed', err);
+        showPlay(card);
       });
     });
   }
