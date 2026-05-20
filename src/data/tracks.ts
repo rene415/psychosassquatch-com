@@ -57,12 +57,20 @@ Started as a joke. Friends heard it and told me to release it. So I did.`,
   },
   {
     title: 'Broken Hearts',
-    releaseDate: '2025-05-20',
+    releaseDate: '2023-06-01',
     spotifyId: 'PLACEHOLDER',
     audioSrc: '/audio/Broken Hearts - Psychosassquatch.mp3',
     cover: '/logo/PsychoSassquatch.png',
-    lore: 'Demo. Probably stays a demo. I made the kick out of a punch sample played at half speed and a sub I drew on a piano roll with my eyes closed. Don’t tell anyone.',
-    note: 'unreleased',
+    note: 'from Beginnings EP',
+    lore: `This is from my first EP. I wanted to collaborate with people, and my cousin came in to write the vocals. I told him this song was going to be a very special one. It took the longest of anything I'd made up to then — I wanted it good.
+
+The title came from his lyrics, with a nod to Cutting Crew. He wanted to write about getting his girl back. I pushed him the other way: don't write about getting her back. Write about her having had all the cards and dropping them. Now YOU're the one standing tall. The man's point of view nobody writes — if you played with my love, it's gone. She doesn't get to come back begging.
+
+Same Ableton workflow but blown out — 30+ tracks in the session. Clock sounds layered in: your time had run out. The bass is very Steve Aoki — I'm pretty sure I used one of his Serum presets. A heartbeat under it, more Claptone than literal. Plucked guitar loops for that far-away nostalgia. Flutes in staccato — the connection between two people holding by a thread.
+
+This was also the first time I put my own vocals on a track — stacked with reverb, lower harmonies underneath, layers of effects. Each ear has its own pad pattern, panned hard, so the separation in the song matches the separation the song is about.
+
+I learned more about music production on this song than on anything before it. Mostly because I had to make decisions for someone else's words.`,
   },
   {
     title: 'Chaos',
