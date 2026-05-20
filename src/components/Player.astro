@@ -52,7 +52,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 <section
   id="player"
   data-track-count={tracks.length}
-  class="relative grid flex-1 place-items-center overflow-hidden px-5 pb-6 pt-24 md:pt-28"
+  class="relative grid flex-1 place-items-center overflow-hidden px-5 pb-3 pt-20 md:pt-24"
   aria-label="Psychosassquatch player"
 >
   <!-- ── Shared SVG filters defined ONCE at the top of the section ─────── -->
@@ -123,7 +123,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   </div>
 
   <!-- ── PLAYER COLUMN ─────────────────────────────────────────────────── -->
-  <div class="relative z-10 flex w-full max-w-3xl flex-col items-center gap-8">
+  <div class="relative z-10 flex w-full max-w-3xl flex-col items-center gap-4 md:gap-5">
     <!-- ── SHIELD PLAYER (the album cover IS the play/pause button) ────── -->
     <div class="flex justify-center">
       <button
@@ -242,17 +242,38 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
           />
         </div>
 
+        <!-- ── Tap hint: pointer-hand cursor with click ripple, hovers OVER -->
+        <!-- the cover. Auto-dismisses on first click, persists via localStorage. -->
+        <div
+          id="tap-hint"
+          class="pointer-events-none absolute inset-0 z-20 grid place-items-center"
+          aria-hidden="true"
+        >
+          <div class="relative grid place-items-center">
+            <!-- Outer ripple ring (animates outward) -->
+            <span class="tap-ripple absolute h-20 w-20 rounded-full border-2 border-white/80 md:h-24 md:w-24"></span>
+            <!-- Inner ripple ring (offset phase) -->
+            <span class="tap-ripple tap-ripple-late absolute h-20 w-20 rounded-full border-2 border-white/60 md:h-24 md:w-24"></span>
+            <!-- Pointer-hand cursor (Lucide 'pointer' silhouette) -->
+            <svg
+              class="tap-hand relative h-14 w-14 -rotate-12 text-white drop-shadow-[0_3px_10px_rgba(0,0,0,0.7)] md:h-16 md:w-16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M22 14a8 8 0 0 1-8 8" />
+              <path d="M18 11v-1a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+              <path d="M14 10V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1" />
+              <path d="M10 9.5V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v10" />
+              <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+            </svg>
+          </div>
+        </div>
       </button>
-    </div>
-
-    <!-- ── Tap-to-play hint (auto-dismisses on first click, persists via localStorage) -->
-    <div
-      id="tap-hint"
-      class="pointer-events-none flex flex-col items-center gap-1"
-      aria-hidden="true"
-    >
-      <span class="tap-finger select-none text-3xl md:text-4xl" role="img" aria-label="point">👆</span>
-      <span class="font-mono text-[10px] uppercase tracking-[0.35em] text-sass-ink/55">tap to play</span>
     </div>
 
     <!-- ── Track title + lore button ──────────────────────────────────── -->
@@ -854,19 +875,34 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     50%      { transform: scale(1.025); }
   }
 
-  /* ── Tap-to-play hint: bouncing finger that fades out after first click ── */
+  /* ── Tap-to-play hint: cursor-hand hovering over the album w/ click ripple ── */
   #tap-hint {
-    animation: hint-bounce 1.5s ease-in-out infinite;
-    transition: opacity 0.6s ease, transform 0.6s ease;
-  }
-  @keyframes hint-bounce {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-10px); }
+    transition: opacity 0.5s ease, transform 0.5s ease;
   }
   #tap-hint.dismissed {
     opacity: 0;
-    transform: translateY(40px);
+    transform: scale(0.7);
     pointer-events: none;
+  }
+  .tap-hand {
+    animation: tap-press 1.4s ease-in-out infinite;
+    transform-origin: 70% 70%;
+  }
+  @keyframes tap-press {
+    0%, 100% { transform: rotate(-12deg) translate(0, 0)  scale(1); }
+    45%      { transform: rotate(-6deg)  translate(4px, 6px) scale(0.9); }
+    55%      { transform: rotate(-6deg)  translate(4px, 6px) scale(0.9); }
+  }
+  .tap-ripple {
+    animation: tap-ripple 1.6s ease-out infinite;
+    opacity: 0;
+  }
+  .tap-ripple-late {
+    animation-delay: 0.4s;
+  }
+  @keyframes tap-ripple {
+    0%   { transform: scale(0.55); opacity: 0.85; }
+    100% { transform: scale(1.7);  opacity: 0; }
   }
 
   /* ── Logo-shaped mask: cover art + fracture layer clipped to shield silhouette ── */
