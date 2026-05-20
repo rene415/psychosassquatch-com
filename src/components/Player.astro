@@ -242,19 +242,17 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
           />
         </div>
 
-        <!-- Paused state overlay: a translucent play arrow that fades out -->
-        <!-- when audio is playing. The shield itself is the click target.  -->
-        <span class="paused-overlay pointer-events-none absolute inset-0 z-10 grid place-items-center transition-opacity duration-300">
-          <svg
-            class="h-16 w-16 text-sass-ink opacity-70 drop-shadow-[0_4px_18px_rgba(0,0,0,0.55)] transition-transform duration-300 group-hover:scale-110 md:h-20 md:w-20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M6 4l14 8-14 8z" />
-          </svg>
-        </span>
       </button>
+    </div>
+
+    <!-- ── Tap-to-play hint (auto-dismisses on first click, persists via localStorage) -->
+    <div
+      id="tap-hint"
+      class="pointer-events-none flex flex-col items-center gap-1"
+      aria-hidden="true"
+    >
+      <span class="tap-finger select-none text-3xl md:text-4xl" role="img" aria-label="point">👆</span>
+      <span class="font-mono text-[10px] uppercase tracking-[0.35em] text-sass-ink/55">tap to play</span>
     </div>
 
     <!-- ── Track title + lore button ──────────────────────────────────── -->
@@ -705,8 +703,20 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       rafId = requestAnimationFrame(tick);
     }
 
+    // ── Tap-to-play hint dismissal ───────────────────────────────────────
+    const tapHint = document.getElementById('tap-hint');
+    try {
+      if (localStorage.getItem('psy-tap-hint-dismissed') === '1') tapHint?.classList.add('dismissed');
+    } catch (_) { /* SSR or storage blocked */ }
+
     // ── Wire controls ────────────────────────────────────────────────────
-    playBtn.addEventListener('click', () => { if (isPlaying) pause(); else play(); });
+    playBtn.addEventListener('click', () => {
+      if (tapHint && !tapHint.classList.contains('dismissed')) {
+        tapHint.classList.add('dismissed');
+        try { localStorage.setItem('psy-tap-hint-dismissed', '1'); } catch (_) {}
+      }
+      if (isPlaying) pause(); else play();
+    });
     skipNext.addEventListener('click', () => loadTrack(currentIdx + 1, isPlaying));
     skipPrev.addEventListener('click', () => {
       // Spotify-style: if more than 3s in, restart current track; else go to prev
@@ -824,9 +834,34 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     opacity: 1;
   }
 
-  /* ── Paused-state overlay: the play arrow disappears once audio starts ── */
-  #player[data-playing="true"] .paused-overlay {
+  /* ── Shield 'breathes' when paused → tells the user it's clickable ───── */
+  #play-btn {
+    animation: shield-breathe 2.8s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
+  }
+  #player[data-playing="true"] #play-btn {
+    animation: none;
+    transform: none;
+  }
+  @keyframes shield-breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.025); }
+  }
+
+  /* ── Tap-to-play hint: bouncing finger that fades out after first click ── */
+  #tap-hint {
+    animation: hint-bounce 1.5s ease-in-out infinite;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  @keyframes hint-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-10px); }
+  }
+  #tap-hint.dismissed {
     opacity: 0;
+    transform: translateY(40px);
+    pointer-events: none;
   }
 
   /* ── Logo-shaped mask: cover art + fracture layer clipped to shield silhouette ── */
@@ -904,22 +939,16 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     75%      { transform: translate(calc(var(--dx, 0) * 0.4), calc(var(--dy, 0) * -0.6)) rotate(4deg); }
   }
 
-  /* ── Main triangle outline: more aggressive animation ─────────────── */
-  #tri-main {
-    animation: tri-pulse 4s ease-in-out infinite;
-  }
-  @keyframes tri-pulse {
-    0%, 100% { stroke-width: 1.3; opacity: 0.95; }
-    33%      { stroke-width: 2.4; opacity: 1; }
-    66%      { stroke-width: 0.8; opacity: 0.7; }
-  }
+  /* ── Main shield outline: stroke pulses ONLY when playing ────────────── */
+  /* (the inline stroke-width=180 on the SVG path is the default at rest;     */
+  /* the keyframes below override during playback in 7200-viewBox space)      */
   #player[data-playing="true"] #tri-main {
     stroke: var(--accent, theme('colors.sass.sauce'));
     animation: tri-pulse-play 1.2s ease-in-out infinite;
   }
   @keyframes tri-pulse-play {
-    0%, 100% { stroke-width: 1.5; }
-    50%      { stroke-width: 3.5; }
+    0%, 100% { stroke-width: 180; }
+    50%      { stroke-width: 420; }
   }
 
   /* Cover image transition */
