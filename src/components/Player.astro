@@ -67,11 +67,14 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   </svg>
 
   <!-- ── Audio-reactive background image ───────────────────────────────── -->
+  <!-- Defaults are 'sharp/calm' so the photo reads cleanly when paused.    -->
+  <!-- Once playback starts the tick loop modulates blur/brightness/scale   -->
+  <!-- with bass; pause() eases everything back to these calm values.       -->
   <div
     id="player-bg"
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 -z-20 hidden bg-cover bg-center"
-    style="filter: blur(var(--bg-blur, 14px)) brightness(var(--bg-bright, 0.45)) saturate(var(--bg-sat, 0.95)); transform: scale(var(--bg-scale, 1.05));"
+    style="filter: blur(var(--bg-blur, 0px)) brightness(var(--bg-bright, 0.7)) saturate(var(--bg-sat, 1)); transform: scale(var(--bg-scale, 1)); transition: filter 250ms ease-out, transform 250ms ease-out;"
     data-bg-src="/photos/IMG_2974.jpeg"
   ></div>
 
@@ -276,8 +279,8 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       </button>
     </div>
 
-    <!-- ── Track title + lore button ──────────────────────────────────── -->
-    <div class="flex flex-col items-center gap-2 text-center">
+    <!-- ── Track title + lore button (only visible while playing) ─────── -->
+    <div class="play-only-block flex flex-col items-center gap-2 text-center">
       <p class="font-mono text-[10px] uppercase tracking-[0.35em] text-sass-ink/45">
         Now playing
       </p>
@@ -674,7 +677,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       offsetSlice?.classList.add('hidden');
       if (bgLoaded && bg) {
         animate(bg, {
-          '--bg-blur': '14px', '--bg-bright': '0.45', '--bg-sat': '0.95', '--bg-scale': '1.05',
+          '--bg-blur': '0px', '--bg-bright': '0.7', '--bg-sat': '1', '--bg-scale': '1',
           duration: 600, ease: 'outQuad',
         });
       }
@@ -861,6 +864,22 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   }
   #player[data-playing="true"] .play-only {
     opacity: 1;
+  }
+
+  /* ── play-only-block: track title + lore button hidden until music plays ── */
+  /* Uses opacity + max-height collapse so the shield + identity strip can sit  */
+  /* closer together when paused (footer reclaims the freed space).             */
+  .play-only-block {
+    opacity: 0;
+    max-height: 0;
+    pointer-events: none;
+    overflow: hidden;
+    transition: opacity 0.4s ease, max-height 0.4s ease;
+  }
+  #player[data-playing="true"] .play-only-block {
+    opacity: 1;
+    max-height: 280px;
+    pointer-events: auto;
   }
 
   /* ── Shield 'breathes' when paused → tells the user it's clickable ───── */
