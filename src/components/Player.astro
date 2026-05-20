@@ -297,8 +297,9 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       </button>
     </div>
 
-    <!-- ── Thick progress bar w/ skip controls inline either side ─────── -->
-    <div class="w-full max-w-2xl px-4">
+    <!-- ── Progress bar + skip controls (part of the Now Playing UI; ─── -->
+    <!-- shares the .play-only-block reveal with the title block above). -->
+    <div class="play-only-block w-full max-w-2xl px-4">
       <div class="flex items-center gap-4">
         <button
           id="skip-prev"
@@ -866,9 +867,10 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     opacity: 1;
   }
 
-  /* ── play-only-block: track title + lore button hidden until music plays ── */
-  /* Uses opacity + max-height collapse so the shield + identity strip can sit  */
-  /* closer together when paused (footer reclaims the freed space).             */
+  /* ── play-only-block: 'Now playing' section (title + lore + progress + ── */
+  /* skip controls) all hidden together until music actually starts.        */
+  /* Uses opacity + max-height collapse so the shield + identity strip sit  */
+  /* closer together when paused (footer reclaims the freed space).         */
   .play-only-block {
     opacity: 0;
     max-height: 0;
@@ -878,7 +880,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   }
   #player[data-playing="true"] .play-only-block {
     opacity: 1;
-    max-height: 280px;
+    max-height: 380px;
     pointer-events: auto;
   }
 
