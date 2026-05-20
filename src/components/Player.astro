@@ -124,20 +124,8 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 
   <!-- ── PLAYER COLUMN ─────────────────────────────────────────────────── -->
   <div class="relative z-10 flex w-full max-w-3xl flex-col items-center gap-8">
-    <!-- Skip prev | Triangle | Skip next -->
-    <div class="relative flex w-full items-center justify-center gap-6 md:gap-10">
-      <button
-        id="skip-prev"
-        type="button"
-        class="grid h-12 w-12 place-items-center rounded-full border border-sass-ink/15 bg-sass-bg/40 text-sass-ink/80 backdrop-blur transition-colors hover:border-sass-sauce hover:text-sass-sauce md:h-14 md:w-14"
-        aria-label="Previous track"
-      >
-        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">
-          <path d="M6 5h2v14H6zM20 5v14L9 12z" />
-        </svg>
-      </button>
-
-      <!-- ── TRIANGLE PLAYER (the whole shape is the play/pause button) ── -->
+    <!-- ── SHIELD PLAYER (the album cover IS the play/pause button) ────── -->
+    <div class="flex justify-center">
       <button
         id="play-btn"
         type="button"
@@ -254,29 +242,18 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
           />
         </div>
 
-        <!-- center play/pause glyph -->
-        <span class="relative z-10 -translate-y-4 grid place-items-center">
-          <span class="grid h-16 w-16 place-items-center rounded-full bg-sass-bg/85 ring-1 ring-sass-ink/30 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110 md:h-20 md:w-20">
-            <svg class="play-icon h-7 w-7 translate-x-[2px] md:h-8 md:w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M6 4l14 8-14 8z" />
-            </svg>
-            <svg class="pause-icon hidden h-7 w-7 md:h-8 md:w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <rect x="5" y="4" width="5" height="16" rx="1" />
-              <rect x="14" y="4" width="5" height="16" rx="1" />
-            </svg>
-          </span>
+        <!-- Paused state overlay: a translucent play arrow that fades out -->
+        <!-- when audio is playing. The shield itself is the click target.  -->
+        <span class="paused-overlay pointer-events-none absolute inset-0 z-10 grid place-items-center transition-opacity duration-300">
+          <svg
+            class="h-16 w-16 text-sass-ink opacity-70 drop-shadow-[0_4px_18px_rgba(0,0,0,0.55)] transition-transform duration-300 group-hover:scale-110 md:h-20 md:w-20"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M6 4l14 8-14 8z" />
+          </svg>
         </span>
-      </button>
-
-      <button
-        id="skip-next"
-        type="button"
-        class="grid h-12 w-12 place-items-center rounded-full border border-sass-ink/15 bg-sass-bg/40 text-sass-ink/80 backdrop-blur transition-colors hover:border-sass-sauce hover:text-sass-sauce md:h-14 md:w-14"
-        aria-label="Next track"
-      >
-        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">
-          <path d="M16 5h2v14h-2zM4 5v14l11-7z" />
-        </svg>
       </button>
     </div>
 
@@ -298,19 +275,43 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       </button>
     </div>
 
-    <!-- ── Thick horizontal progress bar (no time labels) ─────────────── -->
+    <!-- ── Thick progress bar w/ skip controls inline either side ─────── -->
     <div class="w-full max-w-2xl px-4">
-      <div
-        id="seek-track"
-        class="group relative h-3 cursor-pointer overflow-hidden rounded-full bg-sass-ink/15 ring-1 ring-sass-ink/10"
-        role="slider"
-        aria-label="Track position"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        aria-valuenow="0"
-        tabindex="0"
-      >
-        <div id="seek-fill" class="absolute inset-y-0 left-0 w-0 rounded-full" style="background: var(--accent, theme('colors.sass.sauce'));"></div>
+      <div class="flex items-center gap-4">
+        <button
+          id="skip-prev"
+          type="button"
+          class="shrink-0 p-1 text-sass-ink/60 transition-colors hover:text-sass-sauce focus-visible:text-sass-sauce focus-visible:outline-none"
+          aria-label="Previous track"
+        >
+          <svg viewBox="0 0 24 24" class="h-6 w-6 md:h-7 md:w-7" fill="currentColor" aria-hidden="true">
+            <path d="M6 5h2v14H6zM20 5v14L9 12z" />
+          </svg>
+        </button>
+
+        <div
+          id="seek-track"
+          class="group relative h-3 flex-1 cursor-pointer overflow-hidden rounded-full bg-sass-ink/15 ring-1 ring-sass-ink/10"
+          role="slider"
+          aria-label="Track position"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          tabindex="0"
+        >
+          <div id="seek-fill" class="absolute inset-y-0 left-0 w-0 rounded-full" style="background: var(--accent, theme('colors.sass.sauce'));"></div>
+        </div>
+
+        <button
+          id="skip-next"
+          type="button"
+          class="shrink-0 p-1 text-sass-ink/60 transition-colors hover:text-sass-sauce focus-visible:text-sass-sauce focus-visible:outline-none"
+          aria-label="Next track"
+        >
+          <svg viewBox="0 0 24 24" class="h-6 w-6 md:h-7 md:w-7" fill="currentColor" aria-hidden="true">
+            <path d="M16 5h2v14h-2zM4 5v14l11-7z" />
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -821,6 +822,11 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   }
   #player[data-playing="true"] .play-only {
     opacity: 1;
+  }
+
+  /* ── Paused-state overlay: the play arrow disappears once audio starts ── */
+  #player[data-playing="true"] .paused-overlay {
+    opacity: 0;
   }
 
   /* ── Logo-shaped mask: cover art + fracture layer clipped to shield silhouette ── */
