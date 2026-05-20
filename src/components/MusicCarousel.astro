@@ -1,0 +1,214 @@
+---
+import { tracks, type Track } from '../data/tracks';
+
+const sorted: Track[] = [...tracks].sort((a, b) => (a.releaseDate < b.releaseDate ? 1 : -1));
+
+const fmt = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
+};
+---
+
+<section
+  id="music-carousel"
+  class="relative"
+  data-track-count={sorted.length}
+>
+  <!-- Carousel rail -->
+  <div class="relative">
+    <ul
+      id="carousel-rail"
+      class="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth pb-6 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      role="list"
+    >
+      {sorted.map((t, idx) => {
+        const isPlaceholder = t.spotifyId.startsWith('PLACEHOLDER');
+        const fallbackArt = `https://i.scdn.co/image/${t.spotifyId}`; // not real; just for the dom — real cover comes via Spotify embed once spotifyId is set
+        return (
+          <li
+            class="track-card group relative shrink-0 snap-center"
+            style="width: min(78vmin, 480px);"
+            data-track-id={t.spotifyId}
+            data-track-title={t.title}
+            data-idx={idx}
+          >
+            <div class="relative aspect-square overflow-hidden rounded-3xl border border-sass-ink/10 bg-sass-fur/20">
+              <!-- cover image (or placeholder gradient) -->
+              {t.cover ? (
+                <img
+                  src={t.cover}
+                  alt={t.title + ' cover art'}
+                  class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="lazy"
+                />
+              ) : (
+                <div class="absolute inset-0 bg-gradient-to-br from-sass-forest via-sass-fur/60 to-sass-bg"></div>
+              )}
+
+              <!-- darken overlay so play button reads -->
+              <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-sass-bg/85 via-sass-bg/10 to-transparent"></div>
+
+              <!-- giant play button -->
+              <button
+                class="absolute inset-0 grid place-items-center text-sass-ink transition-transform duration-300 hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sass-sauce"
+                aria-label={`Play ${t.title}`}
+                disabled={isPlaceholder}
+                data-action="play-track"
+              >
+                <span class="grid h-20 w-20 place-items-center rounded-full bg-sass-ink/95 text-sass-bg ring-1 ring-sass-ink/30 transition-colors group-hover:bg-sass-sauce group-hover:text-sass-bg md:h-24 md:w-24">
+                  <svg viewBox="0 0 24 24" class="h-8 w-8 translate-x-[2px]" fill="currentColor" aria-hidden="true">
+                    <path d="M6 4l14 8-14 8z" />
+                  </svg>
+                </span>
+              </button>
+
+              <!-- track meta strip -->
+              <div class="pointer-events-none absolute inset-x-0 bottom-0 p-5">
+                <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-sass-ink/55">
+                  {fmt(t.releaseDate)}{isPlaceholder ? ' · placeholder' : ''}
+                </p>
+                <h3 class="mt-1 font-display text-2xl text-sass-ink md:text-3xl">
+                  {t.title}
+                </h3>
+              </div>
+
+              <!-- Spotify embed slot (revealed when clicked) -->
+              <div
+                class="embed-slot pointer-events-none absolute inset-0 hidden bg-sass-bg/95 p-6 backdrop-blur-sm"
+              ></div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+
+    <!-- nav arrows -->
+    <button
+      id="carousel-prev"
+      type="button"
+      class="absolute left-2 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 place-items-center rounded-full border border-sass-ink/15 bg-sass-bg/70 text-sass-ink backdrop-blur transition-colors hover:border-sass-sauce hover:text-sass-sauce md:grid"
+      aria-label="Previous release"
+    >
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <button
+      id="carousel-next"
+      type="button"
+      class="absolute right-2 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 place-items-center rounded-full border border-sass-ink/15 bg-sass-bg/70 text-sass-ink backdrop-blur transition-colors hover:border-sass-sauce hover:text-sass-sauce md:grid"
+      aria-label="Next release"
+    >
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- dot indicators -->
+  <ol id="carousel-dots" class="mt-2 flex flex-wrap items-center justify-center gap-2"></ol>
+</section>
+
+<script>
+  const root = document.getElementById('music-carousel');
+  const rail = document.getElementById('carousel-rail');
+  const prev = document.getElementById('carousel-prev');
+  const next = document.getElementById('carousel-next');
+  const dotsEl = document.getElementById('carousel-dots');
+  if (root && rail && prev && next && dotsEl) {
+    const cards = Array.from(rail.querySelectorAll<HTMLElement>('.track-card'));
+
+    // ─ dot indicators ───────────────────────────────────────────────────
+    cards.forEach((_, i) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'h-1.5 w-6 rounded-full bg-sass-ink/20 transition-all hover:bg-sass-ink/40';
+      btn.setAttribute('aria-label', `Go to release ${i + 1}`);
+      btn.dataset.idx = String(i);
+      btn.addEventListener('click', () => scrollToIdx(i));
+      li.appendChild(btn);
+      dotsEl.appendChild(li);
+    });
+    const dots = Array.from(dotsEl.querySelectorAll<HTMLButtonElement>('button'));
+
+    function scrollToIdx(i: number) {
+      const card = cards[Math.max(0, Math.min(cards.length - 1, i))];
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    function activeIdx(): number {
+      // Find card whose center is closest to rail viewport center
+      const railRect = rail!.getBoundingClientRect();
+      const railCenter = railRect.left + railRect.width / 2;
+      let best = 0;
+      let bestDist = Infinity;
+      cards.forEach((c, i) => {
+        const r = c.getBoundingClientRect();
+        const d = Math.abs(r.left + r.width / 2 - railCenter);
+        if (d < bestDist) { bestDist = d; best = i; }
+      });
+      return best;
+    }
+
+    function syncDots() {
+      const i = activeIdx();
+      dots.forEach((d, di) => {
+        if (di === i) d.className = 'h-1.5 w-10 rounded-full bg-sass-sauce transition-all';
+        else d.className = 'h-1.5 w-6 rounded-full bg-sass-ink/20 transition-all hover:bg-sass-ink/40';
+      });
+    }
+    rail.addEventListener('scroll', () => requestAnimationFrame(syncDots), { passive: true });
+    syncDots();
+
+    prev.addEventListener('click', () => scrollToIdx(activeIdx() - 1));
+    next.addEventListener('click', () => scrollToIdx(activeIdx() + 1));
+
+    // ─ keyboard arrows scoped to the carousel ────────────────────────────
+    root.tabIndex = 0;
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); scrollToIdx(activeIdx() - 1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); scrollToIdx(activeIdx() + 1); }
+    });
+
+    // ─ play button → swap card content with Spotify embed ────────────────
+    rail.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement | null;
+      const btn = target?.closest<HTMLButtonElement>('button[data-action="play-track"]');
+      if (!btn) return;
+      const card = btn.closest<HTMLElement>('.track-card');
+      if (!card) return;
+      const id = card.dataset.trackId;
+      const slot = card.querySelector<HTMLElement>('.embed-slot');
+      if (!id || !slot) return;
+
+      if (id.startsWith('PLACEHOLDER')) {
+        slot.innerHTML = `
+          <div class="flex h-full flex-col items-center justify-center text-center">
+            <p class="font-mono text-[10px] uppercase tracking-widest text-sass-ink/45">no spotify id yet</p>
+            <p class="mt-3 font-display text-xl text-sass-ink/85">drop the real spotifyId in src/data/tracks.ts</p>
+          </div>`;
+      } else if (!slot.querySelector('iframe')) {
+        const iframe = document.createElement('iframe');
+        iframe.src = `https://open.spotify.com/embed/track/${encodeURIComponent(id)}?utm_source=generator&theme=0`;
+        iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+        iframe.loading = 'lazy';
+        iframe.title = card.dataset.trackTitle || 'Spotify player';
+        iframe.className = 'h-full w-full rounded-2xl border-0';
+        slot.appendChild(iframe);
+      }
+      slot.classList.remove('hidden', 'pointer-events-none');
+      slot.classList.add('pointer-events-auto');
+      // Pause every other card's embed by re-hiding (we don't auto-play but this keeps the UI clean)
+      cards.forEach((c) => {
+        if (c === card) return;
+        const s = c.querySelector<HTMLElement>('.embed-slot');
+        if (s && !s.classList.contains('hidden')) {
+          s.classList.add('hidden', 'pointer-events-none');
+          s.classList.remove('pointer-events-auto');
+        }
+      });
+    });
+  }
+</script>
