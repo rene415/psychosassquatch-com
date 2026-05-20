@@ -142,20 +142,23 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         id="play-btn"
         type="button"
         class="group relative grid place-items-center text-sass-ink focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-sass-sauce"
-        style="width:min(54vmin,440px); aspect-ratio:1;"
+        style="width:min(62vmin,506px); aspect-ratio:1;"
         aria-label="Play"
         aria-pressed="false"
       >
         <!-- SVG filters for artifacting (aggressive) -->
+        <!-- Parameters tuned for the 7200-unit shield viewBox: baseFrequency  -->
+        <!-- and displacement scale are ~72x larger than the old 100-unit       -->
+        <!-- triangle so the visual texture density matches.                    -->
         <svg width="0" height="0" class="absolute" aria-hidden="true">
           <defs>
             <filter id="rough-edges" x="-15%" y="-15%" width="130%" height="130%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" seed="3" result="noise"></feTurbulence>
-              <feDisplacementMap in="SourceGraphic" in2="noise" scale="6"></feDisplacementMap>
+              <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="3" result="noise"></feTurbulence>
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="430"></feDisplacementMap>
             </filter>
             <filter id="rough-edges-strong" x="-20%" y="-20%" width="140%" height="140%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="4" seed="7" result="noise"></feTurbulence>
-              <feDisplacementMap id="disp-strong" in="SourceGraphic" in2="noise" scale="14"></feDisplacementMap>
+              <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="4" seed="7" result="noise"></feTurbulence>
+              <feDisplacementMap id="disp-strong" in="SourceGraphic" in2="noise" scale="1000"></feDisplacementMap>
             </filter>
             <filter id="datamosh" x="-15%" y="-15%" width="130%" height="130%">
               <feTurbulence type="turbulence" baseFrequency="0.02 0.5" numOctaves="2" seed="9" result="n"></feTurbulence>
@@ -169,8 +172,8 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
           </defs>
         </svg>
 
-        <!-- chromatic offset LOGO ghosts (RGB split, aggressive) -->
-        <svg viewBox="0 0 7200 7200" class="absolute inset-0 h-full w-full" aria-hidden="true">
+        <!-- chromatic offset LOGO ghosts (RGB split, aggressive) — play-only -->
+        <svg viewBox="0 0 7200 7200" class="play-only absolute inset-0 h-full w-full" aria-hidden="true">
           <!-- cyan ghost, offset left -->
           <g transform="translate(-360, 0)">
             <g transform={LOGO_TRANSFORM}>
@@ -230,8 +233,8 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
           </g>
         </svg>
 
-        <!-- fracture lines: horizontal slashes masked to the logo silhouette -->
-        <div id="fracture-layer" class="pointer-events-none absolute inset-0 overflow-hidden logo-masked">
+        <!-- fracture lines: horizontal slashes masked to the logo silhouette — play-only -->
+        <div id="fracture-layer" class="play-only pointer-events-none absolute inset-0 overflow-hidden logo-masked">
           <div id="glitch-1" class="absolute inset-x-0 h-[1px] bg-sass-sauce/85 mix-blend-screen" style="top:30%;"></div>
           <div id="glitch-2" class="absolute inset-x-0 h-[3px] bg-sass-ink/40 mix-blend-screen" style="top:65%;"></div>
           <div id="glitch-3" class="absolute inset-x-0 h-[1px] bg-sass-glow/75 mix-blend-screen" style="top:10%;"></div>
@@ -811,6 +814,15 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 </script>
 
 <style>
+  /* ── play-only layers: chromatic ghosts + fracture scanlines only when audio plays ── */
+  .play-only {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  #player[data-playing="true"] .play-only {
+    opacity: 1;
+  }
+
   /* ── Logo-shaped mask: cover art + fracture layer clipped to shield silhouette ── */
   /* Uses the user-supplied PsychoSassquatch_outline.png after we removed its    */
   /* white background to make a real alpha mask.                                  */
