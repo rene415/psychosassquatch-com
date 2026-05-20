@@ -41,11 +41,19 @@ I'm influenced by artists you can probably hear on my tracks if you're listening
   },
   {
     title: 'Next To You',
-    releaseDate: '2024-08-01',
+    releaseDate: '2024-04-01',
     spotifyId: '4X7q3PWGqfuLAeErDqgAmy',
     audioSrc: '/audio/Next To You - Psychosassquatch.mp3',
     cover: '/covers/NextToYou.jpg',
-    lore: 'Written sitting next to absolutely nobody on a city bus, which is the lonelier version. Three chords that refused to leave my head for a week — eventually I let them have a song.',
+    lore: `Started April 1st. I host a monthly challenge with friends — we pick a sample, everybody makes a song from it. So this was originally April Fools. The sample was \`ALEX_LUSTIG_synth_loop_plucky_mellows_130_Bmin\`, which I refuse to make sound cooler than it is.
+
+Then I found a vocal sample that said "I feel better when I'm next to you," and that became the song. Almost called it Free — kept Next To You. April Fools didn't survive contact with a chorus.
+
+Built in Ableton, like everything I make. The bass is three different bass sounds stacked on top of each other to get the right thunk. The eerie sections are Serum's "Dream Key" preset — sounds like being lost in a place you can't quite name. There's a breakdown built from a vocal chop I tuned to the original vocal sample, using a sample from a Nero sound pack.
+
+The drums are my favorite part. Layered kicks, lots of reverb, room-filling. If you're listening close — the cherry on top is a cowbell. More cowbell. The SNL bit was already in my head before I added it; once it was there, the whole song clicked. Trance-leaning, pop-feeling, kind of nostalgic to the early-2000s electronic you'd hear at a Carnaval festival.
+
+Started as a joke. Friends heard it and told me to release it. So I did.`,
   },
   {
     title: 'Broken Hearts',
