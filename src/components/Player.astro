@@ -331,14 +331,16 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   </article>
 </div>
 
-<script data-astro-rerun>
-  // Re-execute on every Astro SPA navigation (e.g., user navigated away to
-  // /merch and came back). Without this, the new Player DOM has no wired-up
-  // controls — audio keeps playing in the background but the play button
-  // does nothing.
+<script>
+  // setupPlayer() runs on initial load AND on every Astro SPA navigation
+  // back to home. Without that re-bind, the new Player DOM (after navigating
+  // home→merch→home) would have no wired-up controls.
+  // We can't use `data-astro-rerun` here — that flips the script into inline
+  // mode which doesn't support ES imports (and we need anime.js + tracks).
   import { animate, stagger } from 'animejs';
   import { tracks } from '../data/tracks';
 
+  function setupPlayer() {
   // ── DOM refs ───────────────────────────────────────────────────────────
   const player = document.getElementById('player') as HTMLElement | null;
   const playBtn = document.getElementById('play-btn') as HTMLButtonElement | null;
@@ -773,6 +775,13 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       loadTrack(initialIdx, false);
     }
   }
+  } // end setupPlayer
+
+  // Run on initial page load
+  setupPlayer();
+  // Re-run after every Astro view-transition (so navigating home→merch→home
+  // re-wires the new Player DOM to the persistent audio element).
+  document.addEventListener('astro:page-load', setupPlayer);
 </script>
 
 <style>
