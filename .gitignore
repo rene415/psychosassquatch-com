@@ -4,3 +4,6 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# Personal interview answers — keep local, never push
+interviews.txt
