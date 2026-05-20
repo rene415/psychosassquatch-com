@@ -729,18 +729,21 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       rafId = requestAnimationFrame(tick);
     }
 
-    // ── Tap-to-play hint dismissal ───────────────────────────────────────
+    // ── Tap-to-play hint ─────────────────────────────────────────────────
+    // Visible by default on every cold load. Dismissed only if the audio has
+    // already started playing or moved past time 0 (e.g., user SPA-navigated
+    // back to home with music going). No localStorage — each fresh session
+    // gets the cue.
     const tapHint = document.getElementById('tap-hint');
-    try {
-      if (localStorage.getItem('psy-tap-hint-dismissed') === '1') tapHint?.classList.add('dismissed');
-    } catch (_) { /* SSR or storage blocked */ }
+    // One-time cleanup of the legacy persistent flag from earlier builds.
+    try { localStorage.removeItem('psy-tap-hint-dismissed'); } catch (_) {}
+    if (tapHint && (!audio.paused || audio.currentTime > 0)) {
+      tapHint.classList.add('dismissed');
+    }
 
     // ── Wire controls ────────────────────────────────────────────────────
     playBtn.addEventListener('click', () => {
-      if (tapHint && !tapHint.classList.contains('dismissed')) {
-        tapHint.classList.add('dismissed');
-        try { localStorage.setItem('psy-tap-hint-dismissed', '1'); } catch (_) {}
-      }
+      tapHint?.classList.add('dismissed');
       if (isPlaying) pause(); else play();
     });
     skipNext.addEventListener('click', () => loadTrack(currentIdx + 1, isPlaying));
