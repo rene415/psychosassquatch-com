@@ -1,15 +1,8 @@
 ---
-const items = [
-  { href: '/music', label: 'Music' },
-  { href: '/sessions', label: 'Sessions' },
-  { href: '/lore', label: 'Lore' },
-  { href: '/merch', label: 'Merch' },
-  { href: '/dispatches', label: 'Dispatches' },
-];
 const path = Astro.url.pathname;
 ---
 
-<header class="fixed inset-x-0 top-0 z-40 px-5 py-4 md:px-10 md:py-6">
+<header class="fixed inset-x-0 top-0 z-30 px-5 py-4 md:px-10 md:py-6">
   <div class="flex items-center justify-between gap-6">
     <a href="/" class="group inline-flex items-center gap-3" aria-label="Home">
       <img
@@ -23,60 +16,22 @@ const path = Astro.url.pathname;
       </span>
     </a>
 
-    <nav aria-label="Primary" class="hidden md:block">
+    <nav aria-label="Primary">
       <ul class="flex items-center gap-1 font-mono text-xs uppercase tracking-widest">
-        {items.map((item) => {
-          const active = path === item.href || path.startsWith(item.href + '/');
-          return (
-            <li>
-              <a
-                href={item.href}
-                class:list={[
-                  'rounded-full border px-3 py-1.5 transition-colors duration-200',
-                  active
-                    ? 'border-sass-sauce bg-sass-sauce/15 text-sass-sauce'
-                    : 'border-sass-ink/15 text-sass-ink/70 hover:border-sass-ink/40 hover:text-sass-ink',
-                ]}
-              >
-                {item.label}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
-
-    <button
-      id="nav-toggle"
-      class="md:hidden rounded-full border border-sass-ink/20 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest"
-      aria-expanded="false"
-      aria-controls="mobile-nav"
-    >
-      Menu
-    </button>
-  </div>
-
-  <div
-    id="mobile-nav"
-    class="mt-4 hidden rounded-2xl border border-sass-ink/10 bg-sass-bg/85 p-4 backdrop-blur md:hidden"
-  >
-    <ul class="space-y-2 font-mono text-sm uppercase tracking-widest">
-      {items.map((item) => (
         <li>
-          <a href={item.href} class="block rounded-lg px-3 py-2 text-sass-ink/80 hover:bg-sass-ink/10 hover:text-sass-ink">
-            {item.label}
+          <a
+            href="/merch"
+            class:list={[
+              'rounded-full border px-3 py-1.5 transition-colors duration-200',
+              path.startsWith('/merch')
+                ? 'border-sass-sauce bg-sass-sauce/15 text-sass-sauce'
+                : 'border-sass-ink/15 text-sass-ink/70 hover:border-sass-ink/40 hover:text-sass-ink',
+            ]}
+          >
+            Merch
           </a>
         </li>
-      ))}
-    </ul>
+      </ul>
+    </nav>
   </div>
 </header>
-
-<script is:inline>
-  const t = document.getElementById('nav-toggle');
-  const m = document.getElementById('mobile-nav');
-  t?.addEventListener('click', () => {
-    const open = m.classList.toggle('hidden') === false;
-    t.setAttribute('aria-expanded', String(open));
-  });
-</script>
