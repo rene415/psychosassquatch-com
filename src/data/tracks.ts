@@ -58,9 +58,9 @@ Started as a joke. Friends heard it and told me to release it. So I did.`,
   {
     title: 'Broken Hearts',
     releaseDate: '2023-06-01',
-    spotifyId: 'PLACEHOLDER',
+    spotifyId: '3pTxrurdPo4KrNxW0kaaKs',
     audioSrc: '/audio/Broken Hearts - Psychosassquatch.mp3',
-    cover: '/logo/PsychoSassquatch.png',
+    cover: '/covers/BeginningsEP.jpg',
     note: 'from Beginnings EP',
     lore: `This is from my first EP. I wanted to collaborate with people, and my cousin came in to write the vocals. I told him this song was going to be a very special one. It took the longest of anything I'd made up to then — I wanted it good.
 
@@ -73,30 +73,29 @@ This was also the first time I put my own vocals on a track — stacked with rev
 I learned more about music production on this song than on anything before it. Mostly because I had to make decisions for someone else's words.`,
   },
   {
-    // TODO: needs real spotifyId — send the Spotify URL when you have it
     title: 'Chaos',
     releaseDate: '2023-10-15',
-    spotifyId: 'PLACEHOLDER',
+    spotifyId: '4VhrsHNelF9aMRNe7wKUlm',
     audioSrc: '/audio/Chaos - Psychosassquatch.mp3',
-    cover: '/logo/PsychoSassquatch.png',
+    cover: '/covers/Chaos.jpg',
     lore: 'Lore pending — interview in progress.',
   },
   {
-    // TODO: needs real spotifyId — send the Spotify URL when you have it
     title: 'Greenmoon',
-    releaseDate: '2024-01-01',
-    spotifyId: 'PLACEHOLDER',
+    releaseDate: '2023-06-01',
+    spotifyId: '1VzqRBp0411XMYoKjJgCUV',
     audioSrc: '/audio/Greenmoon - Psychosassquatch.mp3',
-    cover: '/logo/PsychoSassquatch.png',
+    cover: '/covers/BeginningsEP.jpg',
+    note: 'from Beginnings EP',
     lore: 'Lore pending — interview not started.',
   },
   {
-    // TODO: needs real spotifyId — send the Spotify URL when you have it
     title: 'Magnet Rose',
-    releaseDate: '2024-01-01',
-    spotifyId: 'PLACEHOLDER',
+    releaseDate: '2023-06-01',
+    spotifyId: '1LOWmgnlthvwfIBb4jAsFe',
     audioSrc: '/audio/Magnet Rose - Psychosassquatch.mp3',
-    cover: '/logo/PsychoSassquatch.png',
+    cover: '/covers/BeginningsEP.jpg',
+    note: 'from Beginnings EP',
     lore: 'Lore pending — interview not started.',
   },
 ];
