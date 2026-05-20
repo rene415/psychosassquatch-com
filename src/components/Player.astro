@@ -60,35 +60,43 @@ const firstTrack = tracks[0];
         aria-label="Play"
         aria-pressed="false"
       >
-        <!-- SVG filters for artifacting -->
+        <!-- SVG filters for artifacting (aggressive) -->
         <svg width="0" height="0" class="absolute" aria-hidden="true">
           <defs>
-            <filter id="rough-edges" x="-10%" y="-10%" width="120%" height="120%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="noise"></feTurbulence>
-              <feDisplacementMap in="SourceGraphic" in2="noise" scale="3"></feDisplacementMap>
-            </filter>
-            <filter id="rough-edges-strong" x="-15%" y="-15%" width="130%" height="130%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" seed="7" result="noise"></feTurbulence>
+            <filter id="rough-edges" x="-15%" y="-15%" width="130%" height="130%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" seed="3" result="noise"></feTurbulence>
               <feDisplacementMap in="SourceGraphic" in2="noise" scale="6"></feDisplacementMap>
             </filter>
-            <clipPath id="tri-clip" clipPathUnits="objectBoundingBox">
-              <polygon points="0,0 1,0 0.5,1"></polygon>
-            </clipPath>
+            <filter id="rough-edges-strong" x="-20%" y="-20%" width="140%" height="140%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="4" seed="7" result="noise"></feTurbulence>
+              <feDisplacementMap id="disp-strong" in="SourceGraphic" in2="noise" scale="14"></feDisplacementMap>
+            </filter>
+            <filter id="datamosh" x="-15%" y="-15%" width="130%" height="130%">
+              <feTurbulence type="turbulence" baseFrequency="0.02 0.5" numOctaves="2" seed="9" result="n"></feTurbulence>
+              <feDisplacementMap id="disp-datamosh" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+            </filter>
+            <filter id="pixel-grain" x="0" y="0" width="100%" height="100%">
+              <feTurbulence type="fractalNoise" baseFrequency="2.5" numOctaves="1" seed="11" result="n"></feTurbulence>
+              <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.18 0" result="g"></feColorMatrix>
+              <feComposite in="g" in2="SourceGraphic" operator="in"></feComposite>
+            </filter>
           </defs>
         </svg>
 
-        <!-- chromatic offset triangles (artifacting layer 1: ghost copies) -->
+        <!-- chromatic offset triangles (RGB split, aggressive) -->
         <svg viewBox="0 0 100 100" class="absolute inset-0 h-full w-full" aria-hidden="true">
-          <!-- cyan ghost, offset left, soft glow -->
-          <polygon points="48,2 102,2 49,98" fill="none" stroke="#5dd7ff" stroke-width="0.6" opacity="0.55" filter="url(#rough-edges)"></polygon>
-          <!-- magenta ghost, offset right -->
-          <polygon points="52,2 -2,2 51,98" fill="none" stroke="#ff5da4" stroke-width="0.6" opacity="0.55" filter="url(#rough-edges)"></polygon>
+          <!-- cyan ghost, big offset left -->
+          <polygon points="45,2 105,2 47,98" fill="none" stroke="#5dd7ff" stroke-width="1.1" opacity="0.75" filter="url(#rough-edges)"></polygon>
+          <!-- magenta ghost, big offset right -->
+          <polygon points="55,2 -5,2 53,98" fill="none" stroke="#ff5da4" stroke-width="1.1" opacity="0.75" filter="url(#rough-edges)"></polygon>
+          <!-- lime ghost, offset up-right -->
+          <polygon points="52,-3 103,-3 50,93" fill="none" stroke="#a4ff5d" stroke-width="0.75" opacity="0.55" filter="url(#rough-edges-strong)"></polygon>
           <!-- sauce ghost, offset down -->
-          <polygon points="0,4 100,4 50,102" fill="none" stroke="#ff5d2a" stroke-width="0.45" opacity="0.45" filter="url(#rough-edges-strong)"></polygon>
+          <polygon points="-1,6 101,6 50,104" fill="none" stroke="#ff5d2a" stroke-width="0.9" opacity="0.65" filter="url(#rough-edges-strong)"></polygon>
         </svg>
 
-        <!-- cover art clipped inside the triangle -->
-        <div class="absolute inset-0" style="clip-path: polygon(0% 0%, 100% 0%, 50% 100%);">
+        <!-- cover art clipped inside the triangle, with datamosh filter for bass-reactive distortion -->
+        <div id="cover-clip" class="absolute inset-0" style="clip-path: polygon(0% 0%, 100% 0%, 50% 100%); filter: url(#datamosh);">
           <img
             id="cover-img"
             src={firstTrack.cover}
@@ -96,29 +104,47 @@ const firstTrack = tracks[0];
             class="h-full w-full object-cover transition-opacity duration-300"
             loading="eager"
           />
+          <!-- noise grain layer -->
+          <div class="pointer-events-none absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.7'/></svg>&quot;);"
+          ></div>
           <!-- darken so the play icon reads -->
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-sass-bg/30 via-sass-bg/10 to-sass-bg/65"></div>
         </div>
 
-        <!-- main triangle outline (the dominant shape) -->
+        <!-- main triangle outline (rougher now) -->
         <svg viewBox="0 0 100 100" class="absolute inset-0 h-full w-full" aria-hidden="true">
           <polygon
             id="tri-main"
             points="0,2 100,2 50,98"
             fill="none"
             stroke="currentColor"
-            stroke-width="0.9"
+            stroke-width="1.3"
             opacity="0.95"
             filter="url(#rough-edges)"
             class="text-sass-ink"
           ></polygon>
         </svg>
 
-        <!-- glitch scanlines (animated horizontal bars across the triangle) -->
-        <div class="pointer-events-none absolute inset-0 overflow-hidden" style="clip-path: polygon(0% 0%, 100% 0%, 50% 100%);">
-          <div id="glitch-1" class="absolute inset-x-0 h-[1px] bg-sass-sauce/70 mix-blend-screen" style="top:30%;"></div>
-          <div id="glitch-2" class="absolute inset-x-0 h-[2px] bg-sass-ink/30 mix-blend-screen" style="top:65%;"></div>
-          <div id="glitch-3" class="absolute inset-x-0 h-[1px] bg-sass-glow/60 mix-blend-screen" style="top:10%;"></div>
+        <!-- fracture lines: occasional horizontal slashes through the triangle -->
+        <div id="fracture-layer" class="pointer-events-none absolute inset-0 overflow-hidden" style="clip-path: polygon(0% 0%, 100% 0%, 50% 100%);">
+          <div id="glitch-1" class="absolute inset-x-0 h-[1px] bg-sass-sauce/85 mix-blend-screen" style="top:30%;"></div>
+          <div id="glitch-2" class="absolute inset-x-0 h-[3px] bg-sass-ink/40 mix-blend-screen" style="top:65%;"></div>
+          <div id="glitch-3" class="absolute inset-x-0 h-[1px] bg-sass-glow/75 mix-blend-screen" style="top:10%;"></div>
+          <div id="glitch-4" class="absolute inset-x-0 h-[2px] bg-cyan-300/70 mix-blend-screen" style="top:48%;"></div>
+          <div id="glitch-5" class="absolute inset-x-0 h-[1px] bg-pink-400/70 mix-blend-screen" style="top:82%;"></div>
+        </div>
+
+        <!-- offset slice: a horizontal band that occasionally shifts the image laterally (datamosh-feel) -->
+        <div id="offset-slice" class="pointer-events-none absolute inset-x-0 hidden h-[18%] overflow-hidden" style="top:42%;">
+          <img
+            id="cover-img-slice"
+            src={firstTrack.cover}
+            alt=""
+            aria-hidden="true"
+            class="absolute h-[var(--slice-h,560px)] w-full object-cover"
+            style="top:var(--slice-offset,-242px); left:var(--slice-x,0px); filter: hue-rotate(180deg) saturate(1.4);"
+          />
         </div>
 
         <!-- center play/pause glyph -->
@@ -286,7 +312,11 @@ const firstTrack = tracks[0];
   const triMain = document.getElementById('tri-main') as SVGPolygonElement | null;
   const cells = Array.from(document.querySelectorAll<HTMLElement>('.viz-cell'));
   const bg = document.getElementById('player-bg') as HTMLElement | null;
-  const glitchBars = ['glitch-1','glitch-2','glitch-3'].map(id => document.getElementById(id) as HTMLElement | null).filter(Boolean) as HTMLElement[];
+  const glitchBars = ['glitch-1','glitch-2','glitch-3','glitch-4','glitch-5'].map(id => document.getElementById(id) as HTMLElement | null).filter(Boolean) as HTMLElement[];
+  const dispDatamosh = document.getElementById('disp-datamosh') as unknown as SVGFEDisplacementMapElement | null;
+  const dispStrong = document.getElementById('disp-strong') as unknown as SVGFEDisplacementMapElement | null;
+  const offsetSlice = document.getElementById('offset-slice') as HTMLElement | null;
+  const coverImgSlice = document.getElementById('cover-img-slice') as HTMLImageElement | null;
 
   // Lore modal
   const loreModal = document.getElementById('lore-modal') as HTMLElement | null;
@@ -336,16 +366,37 @@ const firstTrack = tracks[0];
       loop: true,
     });
 
-    // ── Glitch slice animation (constant, subtle artifacting) ────────────
+    // ── Glitch slice animation (5 bars, faster) ──────────────────────────
     glitchBars.forEach((bar, i) => {
       animate(bar, {
-        top: [{ to: `${5 + i * 25}%`, duration: 0 }, { to: `${85 - i * 18}%`, duration: 2400 + i * 600 }],
-        opacity: [{ to: 0, duration: 100 }, { to: 0.9, duration: 200 }, { to: 0.9, duration: 800 }, { to: 0, duration: 400 }],
+        top: [{ to: `${5 + i * 17}%`, duration: 0 }, { to: `${92 - i * 14}%`, duration: 1400 + i * 400 }],
+        opacity: [{ to: 0, duration: 60 }, { to: 1, duration: 100 }, { to: 1, duration: 500 }, { to: 0, duration: 220 }],
         ease: 'linear',
         loop: true,
-        delay: i * 700,
+        delay: i * 360,
       });
     });
+
+    // ── Random datamosh bursts: occasional horizontal cover shift ────────
+    function dataMoshBurst() {
+      if (!offsetSlice) return scheduleBurst();
+      // Pick a random vertical band, shift the slice horizontally
+      const top = 15 + Math.random() * 70;          // % of triangle height
+      const x = (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 28);  // px shift
+      offsetSlice.style.top = `${top}%`;
+      offsetSlice.style.setProperty('--slice-x', `${x}px`);
+      // Sync the slice's underlying image to the current cover (positioned to look like a strip from the same image)
+      if (coverImgSlice && coverImg) coverImgSlice.src = coverImg.src;
+      offsetSlice.classList.remove('hidden');
+      setTimeout(() => offsetSlice.classList.add('hidden'), 90 + Math.random() * 70);
+      scheduleBurst();
+    }
+    function scheduleBurst() {
+      // 0.7s – 2.2s between bursts while playing; rarer when idle
+      const next = isPlaying ? 700 + Math.random() * 1500 : 2500 + Math.random() * 4000;
+      setTimeout(dataMoshBurst, next);
+    }
+    scheduleBurst();
 
     // ── Helpers ──────────────────────────────────────────────────────────
     const fmtTime = (s: number) => {
@@ -363,6 +414,7 @@ const firstTrack = tracks[0];
         coverImg!.src = t.cover;
         coverImg!.alt = t.title + ' cover art';
         coverImg!.style.opacity = '1';
+        if (coverImgSlice) coverImgSlice.src = t.cover;
       }, 150);
       titleEl!.textContent = t.title;
       if (noteEl) noteEl.textContent = t.note ?? ' ';
@@ -433,15 +485,22 @@ const firstTrack = tracks[0];
         cells[i].style.opacity = op.toFixed(3);
       }
 
+      let bass = 0;
+      for (let i = 0; i < 8; i++) bass += freqData[i];
+      bass = bass / (8 * 255);
+      bassSmoothed = bassSmoothed * 0.75 + bass * 0.25;
+
       if (bgLoaded && bg) {
-        let bass = 0;
-        for (let i = 0; i < 8; i++) bass += freqData[i];
-        bass = bass / (8 * 255);
-        bassSmoothed = bassSmoothed * 0.75 + bass * 0.25;
         bg.style.setProperty('--bg-blur',   `${(14 - bassSmoothed * 10).toFixed(2)}px`);
         bg.style.setProperty('--bg-bright', `${(0.45 + bassSmoothed * 0.45).toFixed(3)}`);
         bg.style.setProperty('--bg-sat',    `${(0.95 + bassSmoothed * 0.4).toFixed(3)}`);
         bg.style.setProperty('--bg-scale',  `${(1.05 + bassSmoothed * 0.06).toFixed(4)}`);
+      }
+
+      // bass-reactive datamosh: cover image distorts harder on bass
+      if (dispDatamosh) {
+        const scale = bassSmoothed * 26;  // 0 → ~26
+        dispDatamosh.setAttribute('scale', scale.toFixed(2));
       }
 
       // progress bar
