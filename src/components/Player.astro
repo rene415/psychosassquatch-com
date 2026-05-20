@@ -286,13 +286,18 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         <div id="seek-fill" class="absolute inset-y-0 left-0 w-0 rounded-full" style="background: var(--accent, theme('colors.sass.sauce'));"></div>
       </div>
     </div>
+
+    <!-- ── Identity strip (centered, below progress bar) ──────────────── -->
+    <div class="flex flex-col items-center gap-1 text-center">
+      <p class="font-mono text-[10px] uppercase tracking-[0.35em] text-sass-ink/45">
+        Rene Ramirez presents
+      </p>
+      <p class="font-display text-xl text-sass-ink/85 md:text-2xl">
+        Psychosassquatch<span class="text-sass-sauce">.</span>
+      </p>
+    </div>
   </div>
 
-  <!-- ── Bottom-left identity strip ─────────────────────────────────────── -->
-  <div class="pointer-events-none absolute bottom-6 left-5 z-10 md:bottom-8 md:left-8">
-    <p class="font-mono text-[10px] uppercase tracking-[0.35em] text-sass-ink/45">Rene Ramirez presents</p>
-    <p class="mt-1 font-display text-xl text-sass-ink/85 md:text-2xl">Psychosassquatch<span class="text-sass-sauce">.</span></p>
-  </div>
 </section>
 
 <!-- ── Lore popup modal ────────────────────────────────────────────────── -->
