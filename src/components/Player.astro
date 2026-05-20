@@ -392,6 +392,8 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     let mediaNode: MediaElementAudioSourceNode | null = (window as any).__psyGraph?.mediaNode ?? null;
 
     let currentIdx = 0;
+    let isPlaying = !audio.paused && audio.currentTime > 0;
+    let rafId = 0;
 
     // ── Triangle → freq bin map (from data attribute) ─────────────────────
     const triBin = tris.map((t) => parseInt(t.dataset.bin || '0', 10));
