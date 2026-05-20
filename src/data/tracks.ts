@@ -25,11 +25,19 @@ export interface Track {
 export const tracks: Track[] = [
   {
     title: 'Oni',
-    releaseDate: '2023-12-01',
+    releaseDate: '2022-10-31',
     spotifyId: '5lZc6mJ1V6yCogukAgd0cb',
     audioSrc: '/audio/Oni - Psychosassquatch.mp3',
     cover: '/covers/Oni.jpg',
-    lore: 'The bass arrived first. The lyrics showed up three weeks later, on a Tuesday, in a dream that involved a vending machine. I started recording at 1am, finished at 5, and the only edit since has been making the kick 1dB louder.',
+    lore: `Started September 11, 2022 — I'd just rewatched Hereditary and decided I needed a Halloween song before Halloween was over.
+
+The title arrived before the song did. I asked an early-days AI for "a demon" and it gave me this thing I couldn't stop looking at — a shape I loved. Named it Oni, after the Japanese demon, after the movie I'd just watched. The song followed.
+
+The bones: a stupid little two-note melody (F# to E) on Serum's "BA Analog Pluck" preset — I think it's a default. Atmosphere stacked over it from Astra (a Splice plug-in). A sidechained kick gives it that 90s Daft Punk feel. Halfway through it cuts into hip-hop / trap because I was new at this and didn't yet know how to write a second section any other way — that cut is the song now.
+
+Then I layered b-roll of people murmuring in cafés. The whole thing turned into a demon dancing alone at a club in hell, or walking endlessly down the stairs of one. Pressure with a beat under it.
+
+I'm influenced by artists you can probably hear on my tracks if you're listening close. I try not to copy them — I just can't unhear them.`,
   },
   {
     title: 'Next To You',
