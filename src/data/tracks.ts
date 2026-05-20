@@ -73,31 +73,31 @@ This was also the first time I put my own vocals on a track — stacked with rev
 I learned more about music production on this song than on anything before it. Mostly because I had to make decisions for someone else's words.`,
   },
   {
+    // TODO: needs real spotifyId — send the Spotify URL when you have it
     title: 'Chaos',
     releaseDate: '2023-10-15',
     spotifyId: 'PLACEHOLDER',
     audioSrc: '/audio/Chaos - Psychosassquatch.mp3',
     cover: '/logo/PsychoSassquatch.png',
-    lore: 'The title is also the workflow. There’s a take where I forgot to mute the metronome and you can almost hear it under the snare. Almost. I left it. Cryptid easter egg.',
-    note: 'unreleased preview',
+    lore: 'Lore pending — interview in progress.',
   },
   {
+    // TODO: needs real spotifyId — send the Spotify URL when you have it
     title: 'Greenmoon',
-    releaseDate: '2025-05-20',
+    releaseDate: '2024-01-01',
     spotifyId: 'PLACEHOLDER',
     audioSrc: '/audio/Greenmoon - Psychosassquatch.mp3',
     cover: '/logo/PsychoSassquatch.png',
-    lore: 'I watched a moon I’m about 70% sure I imagined. The chord progression came out of trying to describe its color out loud. Sounds nothing like that. Vibes correct though.',
-    note: 'unreleased',
+    lore: 'Lore pending — interview not started.',
   },
   {
+    // TODO: needs real spotifyId — send the Spotify URL when you have it
     title: 'Magnet Rose',
-    releaseDate: '2025-05-20',
+    releaseDate: '2024-01-01',
     spotifyId: 'PLACEHOLDER',
     audioSrc: '/audio/Magnet Rose - Psychosassquatch.mp3',
     cover: '/logo/PsychoSassquatch.png',
-    lore: 'Two synth lines kept trying to merge with each other. I stopped trying to keep them apart. Whatever this is, that’s why.',
-    note: 'unreleased',
+    lore: 'Lore pending — interview not started.',
   },
 ];
 
