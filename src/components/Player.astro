@@ -3,6 +3,7 @@ import { tracks, socials } from '../data/tracks';
 const firstTrack = tracks[0];
 
 // ── Triangle field generation (concentric rings spread across viewport) ──
+// Each gets per-triangle drift values so they bounce around independently.
 const N_TRIS = 140;
 const triangles = Array.from({ length: N_TRIS }, (_, i) => {
   const ring = Math.floor(i / 20);            // 7 rings
@@ -13,22 +14,30 @@ const triangles = Array.from({ length: N_TRIS }, (_, i) => {
   const size = Math.max(0.9, 5.5 - ring * 0.55);
   const rot = (i * 47) % 360;
   const binIdx = Math.min(127, ring * 16 + (i % 16) * 2);
-  return { x: x.toFixed(2), y: y.toFixed(2), size: size.toFixed(2), rot, binIdx, idx: i };
+  // Deterministic pseudo-random drift per triangle (sin-seeded)
+  const ps = (n: number) => (Math.sin(i * (n + 1) * 11.3) + 1) / 2;
+  const driftX = (-60 + ps(1) * 120).toFixed(0);  // ±60 px
+  const driftY = (-60 + ps(2) * 120).toFixed(0);
+  const driftDur = (9 + ps(3) * 12).toFixed(1);    // 9–21 s
+  const driftDelay = (-ps(4) * 20).toFixed(1);
+  return { x: x.toFixed(2), y: y.toFixed(2), size: size.toFixed(2), rot, binIdx, driftX, driftY, driftDur, driftDelay, idx: i };
 });
 
-// ── Floating speckles ────────────────────────────────────────────────────
-const N_SPECKLES = 48;
+// ── Floating speckles (boosted: bigger, brighter, more of them) ──────────
+const N_SPECKLES = 80;
 const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
-  // Deterministic-ish pseudo-random from index
-  const s = (n: number, m = 1000) => ((Math.sin(i * (n + 1) * 9.7) + 1) / 2);
+  const s = (n: number) => ((Math.sin(i * (n + 1) * 9.7) + 1) / 2);
+  // ~10% are 'feature' speckles — bigger, slower, more glow
+  const isFeature = i % 10 === 0;
   return {
     x: (s(1) * 100).toFixed(1),
     y: (s(2) * 100).toFixed(1),
-    dx: (-30 + s(3) * 60).toFixed(0),  // px drift x
-    dy: (-30 + s(4) * 60).toFixed(0),  // px drift y
-    d: (6 + s(5) * 12).toFixed(1),      // s duration
-    delay: (-s(6) * 14).toFixed(1),     // s negative delay → randomized phase
-    size: (1 + s(7) * 2.5).toFixed(1),  // px
+    dx: (-80 + s(3) * 160).toFixed(0),
+    dy: (-80 + s(4) * 160).toFixed(0),
+    d: ((isFeature ? 11 : 7) + s(5) * 10).toFixed(1),
+    delay: (-s(6) * 14).toFixed(1),
+    size: isFeature ? (5 + s(7) * 5).toFixed(1) : (2 + s(7) * 4).toFixed(1),
+    glow: isFeature ? '24px' : '12px',
     idx: i,
   };
 });
@@ -69,9 +78,15 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         data-ty={t.y}
         style={`left:${t.x}%; top:${t.y}%; width:${t.size}vmin; height:${t.size}vmin; --tri-rot:${t.rot}deg;`}
       >
-        <svg viewBox="0 0 10 10" class="h-full w-full" aria-hidden="true">
-          <polygon points="0,0 10,0 5,10" fill="currentColor"></polygon>
-        </svg>
+        <!-- inner div takes the slow CSS drift, decoupled from JS audio-reactive transforms on the outer -->
+        <div
+          class="viz-tri-drift"
+          style={`--dx:${t.driftX}px; --dy:${t.driftY}px; --dur:${t.driftDur}s; --dly:${t.driftDelay}s;`}
+        >
+          <svg viewBox="0 0 10 10" class="h-full w-full" aria-hidden="true">
+            <polygon class="shape" points="0,0 10,0 5,10" fill="currentColor"></polygon>
+          </svg>
+        </div>
       </div>
     ))}
   </div>
@@ -85,7 +100,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     {speckles.map((s) => (
       <span
         class="speckle"
-        style={`left:${s.x}%; top:${s.y}%; width:${s.size}px; height:${s.size}px; --dx:${s.dx}px; --dy:${s.dy}px; animation-duration:${s.d}s; animation-delay:${s.delay}s;`}
+        style={`left:${s.x}%; top:${s.y}%; width:${s.size}px; height:${s.size}px; --dx:${s.dx}px; --dy:${s.dy}px; --glow:${s.glow}; animation-duration:${s.d}s; animation-delay:${s.delay}s;`}
       ></span>
     ))}
   </div>
@@ -388,6 +403,47 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 
     // ── Triangle → freq bin map (from data attribute) ─────────────────────
     const triBin = tris.map((t) => parseInt(t.dataset.bin || '0', 10));
+    const shapeEls = Array.from(document.querySelectorAll<SVGPolygonElement>('.shape'));
+
+    // ── Shape morphing through song progress ──────────────────────────────
+    // 5 shapes; each gets ~20% of the song. Cycles back to triangle at 100%.
+    const SHAPES = [
+      '0,0 10,0 5,10',                                                  // triangle
+      '0,0 10,0 10,10 0,10',                                            // square
+      '5,0 10,3 10,7 5,10 0,7 0,3',                                     // hexagon
+      '5,0 10,5 5,10 0,5',                                              // diamond
+      '5,0 6.2,3.8 10,3.8 6.9,6.2 8.1,10 5,7.6 1.9,10 3.1,6.2 0,3.8 3.8,3.8', // star
+    ];
+    let currentShapeIdx = 0;
+    function setShape(idx: number) {
+      const points = SHAPES[idx % SHAPES.length];
+      // Brief scale-out → swap → scale-in for visible morph moment
+      shapeEls.forEach((p) => {
+        const wrap = p.parentElement?.parentElement; // .viz-tri-drift > svg > polygon
+        if (!wrap) return;
+        wrap.style.transition = 'transform 180ms ease';
+        wrap.style.transform = 'scale(0.4)';
+      });
+      setTimeout(() => {
+        shapeEls.forEach((p) => p.setAttribute('points', points));
+        shapeEls.forEach((p) => {
+          const wrap = p.parentElement?.parentElement;
+          if (!wrap) return;
+          wrap.style.transform = '';
+          // clear inline transition after one cycle so the audio-reactive layer reads unaffected
+          setTimeout(() => { if (wrap.style.transition) wrap.style.transition = ''; }, 220);
+        });
+      }, 200);
+    }
+    function checkShapeMorph() {
+      if (!audio.duration || !isFinite(audio.duration)) return;
+      const pct = audio.currentTime / audio.duration;
+      const segIdx = Math.min(SHAPES.length - 1, Math.floor(pct * SHAPES.length));
+      if (segIdx !== currentShapeIdx) {
+        currentShapeIdx = segIdx;
+        setShape(segIdx);
+      }
+    }
 
     // ── Compute hide offsets: each triangle's distance to viewport center ──
     function computeHideOffsets() {
@@ -594,6 +650,9 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         tris[i].style.opacity = op.toFixed(3);
       }
 
+      // Shape morph based on song progress
+      checkShapeMorph();
+
       let bass = 0;
       for (let i = 0; i < 8; i++) bass += freqData[i];
       bass = bass / (8 * 255);
@@ -691,13 +750,10 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     loreBackdrop?.addEventListener('click', closeLore);
 
     // ── Random track on initial load (different each refresh) ───────────
-    if (tracks.length > 1) {
-      const randomIdx = Math.floor(Math.random() * tracks.length);
-      if (randomIdx !== 0) loadTrack(randomIdx, false);
-      else sampleCoverAccent(); // still sample for track 0
-    } else {
-      sampleCoverAccent();
-    }
+    // IMPORTANT: always call loadTrack — that's what wires audio.src.
+    // Without it, clicking Play on the initial track is a no-op.
+    const initialIdx = tracks.length > 1 ? Math.floor(Math.random() * tracks.length) : 0;
+    loadTrack(initialIdx, false);
   }
 </script>
 
@@ -721,25 +777,46 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   #player:not([data-playing]) .viz-tri { color: theme('colors.sass.ink' / 30%); }
   #player[data-playing="true"] .viz-tri { color: var(--accent, theme('colors.sass.sauce')); }
 
-  /* ── Floating speckles (visible only during playback) ─────────────── */
+  /* ── Floating speckles (boosted: bigger, brighter, glow harder) ───── */
   .speckle {
     position: absolute;
     border-radius: 50%;
     background: var(--accent, theme('colors.sass.sauce'));
-    box-shadow: 0 0 4px var(--accent-soft, rgba(255,93,42,0.6));
+    box-shadow:
+      0 0 var(--glow, 12px) var(--accent, theme('colors.sass.sauce')),
+      0 0 calc(var(--glow, 12px) * 1.8) var(--accent-soft, rgba(255,93,42,0.5));
     opacity: 0;
     pointer-events: none;
     will-change: transform, opacity;
+    mix-blend-mode: screen;
   }
   #player[data-playing="true"] .speckle {
     animation: speckle-drift var(--d, 12s) ease-in-out infinite;
   }
   @keyframes speckle-drift {
-    0%   { opacity: 0;   transform: translate(0,           0); }
-    20%  { opacity: 0.9; transform: translate(calc(var(--dx,0)*0.3), calc(var(--dy,0)*0.3)); }
-    50%  { opacity: 0.7; transform: translate(var(--dx,0), var(--dy,0)); }
-    80%  { opacity: 0.9; transform: translate(calc(var(--dx,0)*0.6), calc(var(--dy,0)*0.6)); }
-    100% { opacity: 0;   transform: translate(0,           0); }
+    0%   { opacity: 0;   transform: translate(0,           0)            scale(0.6); }
+    15%  { opacity: 1;   transform: translate(calc(var(--dx,0)*0.25), calc(var(--dy,0)*0.25)) scale(1); }
+    50%  { opacity: 0.95; transform: translate(var(--dx,0), var(--dy,0)) scale(1.1); }
+    85%  { opacity: 1;   transform: translate(calc(var(--dx,0)*0.6), calc(var(--dy,0)*0.6)) scale(0.95); }
+    100% { opacity: 0;   transform: translate(0,           0)            scale(0.6); }
+  }
+
+  /* ── Triangle drift (inner wrapper bounces slowly while playing) ──── */
+  .viz-tri-drift {
+    width: 100%;
+    height: 100%;
+    display: block;
+    will-change: transform;
+  }
+  #player[data-playing="true"] .viz-tri-drift {
+    animation: tri-drift var(--dur, 12s) ease-in-out infinite;
+    animation-delay: var(--dly, 0s);
+  }
+  @keyframes tri-drift {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    25%      { transform: translate(var(--dx, 0), calc(var(--dy, 0) * 0.5)) rotate(8deg); }
+    50%      { transform: translate(calc(var(--dx, 0) * -0.6), var(--dy, 0)) rotate(-6deg); }
+    75%      { transform: translate(calc(var(--dx, 0) * 0.4), calc(var(--dy, 0) * -0.6)) rotate(4deg); }
   }
 
   /* ── Main triangle outline: more aggressive animation ─────────────── */
