@@ -536,25 +536,26 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     });
 
     // ── Random datamosh bursts: occasional horizontal cover shift ────────
+    // Only runs while audio is playing — the burst loop self-terminates when
+    // isPlaying flips false (next scheduleBurst() bails) and is kicked off
+    // again from play() below.
+    let burstTimer = 0;
     function dataMoshBurst() {
-      if (!offsetSlice) return scheduleBurst();
-      // Pick a random vertical band, shift the slice horizontally
-      const top = 15 + Math.random() * 70;          // % of triangle height
-      const x = (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 28);  // px shift
+      if (!isPlaying || !offsetSlice) return;
+      const top = 15 + Math.random() * 70;                                    // % of shield height
+      const x = (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 28);   // px shift
       offsetSlice.style.top = `${top}%`;
       offsetSlice.style.setProperty('--slice-x', `${x}px`);
-      // Sync the slice's underlying image to the current cover (positioned to look like a strip from the same image)
       if (coverImgSlice && coverImg) coverImgSlice.src = coverImg.src;
       offsetSlice.classList.remove('hidden');
       setTimeout(() => offsetSlice.classList.add('hidden'), 90 + Math.random() * 70);
       scheduleBurst();
     }
     function scheduleBurst() {
-      // 0.7s – 2.2s between bursts while playing; rarer when idle
-      const next = isPlaying ? 700 + Math.random() * 1500 : 2500 + Math.random() * 4000;
-      setTimeout(dataMoshBurst, next);
+      if (!isPlaying) return;  // stay quiet when paused
+      clearTimeout(burstTimer);
+      burstTimer = window.setTimeout(dataMoshBurst, 700 + Math.random() * 1500);
     }
-    scheduleBurst();
 
     // ── Cover-color sampling → --accent CSS variable ─────────────────────
     function sampleCoverAccent() {
@@ -633,6 +634,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       playIcon?.classList.add('hidden');
       pauseIcon?.classList.remove('hidden');
       explodeTriangles();
+      scheduleBurst();
       if (!rafId) tick();
     }
 
@@ -646,6 +648,9 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       pauseIcon?.classList.add('hidden');
       if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       retractTriangles();
+      // Stop the datamosh burst loop & hide any in-flight slice immediately
+      clearTimeout(burstTimer);
+      offsetSlice?.classList.add('hidden');
       if (bgLoaded && bg) {
         animate(bg, {
           '--bg-blur': '14px', '--bg-bright': '0.45', '--bg-sat': '0.95', '--bg-scale': '1.05',
