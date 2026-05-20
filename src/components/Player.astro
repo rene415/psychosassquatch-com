@@ -1,0 +1,310 @@
+---
+const ROWS = 13;
+const COLS = 13;
+const cells = Array.from({ length: ROWS * COLS }, (_, i) => i);
+---
+
+<section
+  id="player"
+  data-track-src="/audio/demo.mp3"
+  data-track-title="demo loop · synthesized in-browser"
+  class="relative grid min-h-dvh place-items-center px-5"
+  aria-label="Psychosassquatch player"
+>
+  <!-- ambient blob backdrop -->
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div class="absolute left-1/2 top-1/2 h-[60vmin] w-[60vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sass-sauce/10 blur-[140px]"></div>
+    <div class="absolute left-1/2 top-1/2 h-[80vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sass-glow/5 blur-[180px]"></div>
+  </div>
+
+  <!-- 13×13 visualizer grid -->
+  <div
+    id="viz"
+    class="pointer-events-none absolute left-1/2 top-1/2 z-0 grid -translate-x-1/2 -translate-y-1/2"
+    style={`width:min(82vmin,720px); aspect-ratio:1; grid-template-columns:repeat(${COLS},1fr); gap:clamp(2px,0.6vmin,8px);`}
+    aria-hidden="true"
+  >
+    {cells.map((i) => (
+      <span class="viz-cell block rounded-[3px] bg-sass-ink/30 will-change-transform" data-i={i}></span>
+    ))}
+  </div>
+
+  <!-- giant + / pause button -->
+  <button
+    id="play-btn"
+    type="button"
+    class="relative z-10 grid place-items-center rounded-full text-sass-ink transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sass-sauce"
+    style="width:min(28vmin,260px); height:min(28vmin,260px);"
+    aria-label="Play"
+    aria-pressed="false"
+  >
+    <span class="absolute inset-0 rounded-full bg-sass-bg/40 ring-1 ring-sass-ink/15 backdrop-blur-sm transition-transform duration-500"></span>
+
+    <svg id="play-glyph" viewBox="-50 -50 100 100" class="relative z-10 h-[60%] w-[60%]" aria-hidden="true">
+      <!-- horizontal bar of + -->
+      <rect id="bar-h" x="-36" y="-6" width="72" height="12" rx="2" fill="currentColor"></rect>
+      <!-- vertical bar of + -->
+      <rect id="bar-v" x="-6" y="-36" width="12" height="72" rx="2" fill="currentColor"></rect>
+    </svg>
+
+    <span
+      id="play-ring"
+      class="pointer-events-none absolute inset-[-8%] rounded-full border border-sass-sauce/0 transition-colors"
+    ></span>
+  </button>
+
+  <!-- bottom strip: artist + track + state -->
+  <div class="pointer-events-none absolute bottom-10 left-0 right-0 z-10 px-6">
+    <div class="mx-auto flex max-w-3xl items-end justify-between gap-6">
+      <div>
+        <p class="font-mono text-[10px] uppercase tracking-[0.35em] text-sass-ink/45">
+          Rene Ramirez presents
+        </p>
+        <p class="mt-1 font-display text-xl text-sass-ink/85 md:text-2xl">
+          Psychosassquatch<span class="text-sass-sauce">.</span>
+        </p>
+      </div>
+      <div class="text-right">
+        <p id="track-label" class="font-mono text-[10px] uppercase tracking-[0.35em] text-sass-ink/45">
+          press + · queue a vibe
+        </p>
+        <p class="mt-1 font-display text-sm text-sass-ink/70">
+          electronic · lo-fi · alt · hip-hop · indie
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { animate, stagger, utils } from 'animejs';
+
+  const player = document.getElementById('player') as HTMLElement | null;
+  const btn = document.getElementById('play-btn') as HTMLButtonElement | null;
+  const barH = document.getElementById('bar-h') as SVGRectElement | null;
+  const barV = document.getElementById('bar-v') as SVGRectElement | null;
+  const ring = document.getElementById('play-ring') as HTMLElement | null;
+  const label = document.getElementById('track-label') as HTMLElement | null;
+  const cells = Array.from(document.querySelectorAll<HTMLElement>('.viz-cell'));
+
+  if (!player || !btn || !barH || !barV || !ring || !label || cells.length === 0) {
+    // Component DOM missing; bail out quietly
+  } else {
+    // ── Build cell → frequency-bin map (center-out spiral) ───────────────
+    const COLS = 13;
+    const ROWS = 13;
+    const cx = (COLS - 1) / 2;
+    const cy = (ROWS - 1) / 2;
+    const maxD = Math.hypot(cx, cy);
+    const cellBin = cells.map((_, i) => {
+      const x = i % COLS;
+      const y = Math.floor(i / COLS);
+      const d = Math.hypot(x - cx, y - cy);
+      // Lower freq → center; higher freq → edges. fft 512 → 256 bins.
+      return Math.min(255, Math.round((d / maxD) * 128));
+    });
+
+    // ── Idle "breathing" animation (anime.js v4 stagger from center) ─────
+    const idleAnim = animate(cells, {
+      scale: [
+        { to: 0.55, duration: 900 },
+        { to: 1.0, duration: 900 },
+      ],
+      opacity: [
+        { to: 0.25, duration: 900 },
+        { to: 0.75, duration: 900 },
+      ],
+      delay: stagger(35, { from: 'center' }),
+      ease: 'inOutSine',
+      loop: true,
+    });
+
+    // ── Audio plumbing ───────────────────────────────────────────────────
+    type Mode = 'file' | 'synth';
+    let audioCtx: AudioContext | null = null;
+    let analyser: AnalyserNode | null = null;
+    let freqData: Uint8Array | null = null;
+    let mode: Mode = 'synth';
+    let mediaEl: HTMLAudioElement | null = null;
+    let synthBuffer: AudioBuffer | null = null;
+    let synthNode: AudioBufferSourceNode | null = null;
+    let isPlaying = false;
+    let rafId = 0;
+
+    async function buildAudio(): Promise<{ kind: 'file' | 'synth'; title: string }> {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.78;
+      freqData = new Uint8Array(analyser.frequencyBinCount);
+      analyser.connect(audioCtx.destination);
+
+      const src = player.dataset.trackSrc || '';
+      const trackTitle = player.dataset.trackTitle || 'demo';
+
+      // Try to load a real track first; fall back to synth on 404/error.
+      try {
+        const head = await fetch(src, { method: 'HEAD' });
+        if (head.ok) {
+          mediaEl = new Audio(src);
+          mediaEl.crossOrigin = 'anonymous';
+          mediaEl.loop = true;
+          mediaEl.preload = 'auto';
+          const node = audioCtx.createMediaElementSource(mediaEl);
+          node.connect(analyser);
+          mode = 'file';
+          return { kind: 'file', title: trackTitle };
+        }
+      } catch (_) { /* fall through */ }
+
+      // ── Synthesized lo-fi loop fallback ────────────────────────────────
+      // 4-bar loop at 85 bpm. Kick + bass + filtered noise hat + arp.
+      const bpm = 85;
+      const beatSec = 60 / bpm;
+      const barSec = beatSec * 4;
+      const loopSec = barSec * 4;
+      const sr = audioCtx.sampleRate;
+      const buffer = audioCtx.createBuffer(2, Math.floor(loopSec * sr), sr);
+
+      const arpNotes = [55, 65.41, 73.42, 82.41, 87.31, 73.42, 65.41, 58.27]; // A1-ish lo-fi
+      for (let ch = 0; ch < 2; ch++) {
+        const data = buffer.getChannelData(ch);
+        for (let n = 0; n < data.length; n++) {
+          const t = n / sr;
+          const beat = t / beatSec;
+          const beatFrac = beat - Math.floor(beat);
+          let sample = 0;
+
+          // Kick on every beat
+          if (beatFrac < 0.18) {
+            const env = Math.exp(-beatFrac * 18);
+            const freq = 55 + 60 * Math.exp(-beatFrac * 30);
+            sample += Math.sin(2 * Math.PI * freq * beatFrac) * env * 0.55;
+          }
+          // Sub-bass throughout
+          sample += Math.sin(2 * Math.PI * 41.2 * t) * 0.07;
+          // Hi-hat noise on offbeats
+          if (beatFrac > 0.48 && beatFrac < 0.55) {
+            sample += (Math.random() * 2 - 1) * 0.08;
+          }
+          // Arp every 1/8 note
+          const eighth = Math.floor(t / (beatSec / 2));
+          const note = arpNotes[eighth % arpNotes.length] * 4; // up 2 octaves
+          const arpPhase = (t % (beatSec / 2)) / (beatSec / 2);
+          sample += Math.sin(2 * Math.PI * note * t) * Math.exp(-arpPhase * 4) * 0.12;
+          // Subtle vinyl crackle
+          sample += (Math.random() * 2 - 1) * 0.012;
+
+          data[n] = Math.max(-0.95, Math.min(0.95, sample));
+        }
+      }
+
+      synthBuffer = buffer;
+      mode = 'synth';
+      return { kind: 'synth', title: 'demo loop · synthesized in-browser' };
+    }
+
+    function startSynth() {
+      if (!audioCtx || !analyser || !synthBuffer) return;
+      const node = audioCtx.createBufferSource();
+      node.buffer = synthBuffer;
+      node.loop = true;
+      node.connect(analyser);
+      node.start(0);
+      synthNode = node;
+    }
+
+    function stopSynth() {
+      if (synthNode) {
+        try { synthNode.stop(); } catch (_) { /* already stopped */ }
+        try { synthNode.disconnect(); } catch (_) { /* fine */ }
+        synthNode = null;
+      }
+    }
+
+    // ── Visualizer render loop (drives transform via raw style for perf) ─
+    function tick() {
+      if (!analyser || !freqData) return;
+      analyser.getByteFrequencyData(freqData);
+      for (let i = 0; i < cells.length; i++) {
+        const v = freqData[cellBin[i]] / 255;
+        // ease-out so quiet bins still pulse a little
+        const s = 0.35 + Math.pow(v, 0.8) * 1.2;
+        const op = 0.25 + Math.pow(v, 0.6) * 0.75;
+        cells[i].style.transform = `scale(${s.toFixed(3)})`;
+        cells[i].style.opacity = op.toFixed(3);
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+
+    // ── + ↔ ❚❚ glyph morph (anime.js drives SVG rect attrs) ──────────────
+    function morphToPause() {
+      utils.set([barH, barV], { transformOrigin: 'center' });
+      animate(barH, { rotate: 90, x: -22, width: 16, height: 60, duration: 600, ease: 'outElastic(1, .65)' });
+      animate(barV, { x: 22, width: 16, height: 60, duration: 600, ease: 'outElastic(1, .65)' });
+    }
+    function morphToPlus() {
+      animate(barH, { rotate: 0, x: 0, width: 72, height: 12, duration: 500, ease: 'inOutExpo' });
+      animate(barV, { x: 0, width: 12, height: 72, duration: 500, ease: 'inOutExpo' });
+    }
+
+    async function play() {
+      if (!audioCtx) {
+        const { kind, title } = await buildAudio();
+        label.textContent = (kind === 'synth' ? '▶ synth · ' : '▶ now playing · ') + title;
+      }
+      if (audioCtx?.state === 'suspended') await audioCtx.resume();
+
+      if (mode === 'file' && mediaEl) {
+        await mediaEl.play();
+      } else if (mode === 'synth') {
+        startSynth();
+      }
+
+      isPlaying = true;
+      player!.setAttribute('data-playing', 'true');
+      btn!.setAttribute('aria-pressed', 'true');
+      btn!.setAttribute('aria-label', 'Pause');
+      ring!.classList.remove('border-sass-sauce/0');
+      ring!.classList.add('border-sass-sauce/60');
+      idleAnim.pause();
+      morphToPause();
+      if (!rafId) tick();
+    }
+
+    function pause() {
+      if (mode === 'file' && mediaEl) mediaEl.pause();
+      else if (mode === 'synth') stopSynth();
+
+      isPlaying = false;
+      player!.setAttribute('data-playing', 'false');
+      btn!.setAttribute('aria-pressed', 'false');
+      btn!.setAttribute('aria-label', 'Play');
+      ring!.classList.add('border-sass-sauce/0');
+      ring!.classList.remove('border-sass-sauce/60');
+      morphToPlus();
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      idleAnim.play();
+    }
+
+    btn.addEventListener('click', () => {
+      if (isPlaying) pause(); else play();
+    });
+
+    // Keyboard: space toggles when focused (and also globally on the page)
+    document.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.code === 'Space') { e.preventDefault(); btn!.click(); }
+    });
+  }
+</script>
+
+<style>
+  .viz-cell {
+    transform-origin: center;
+    transition: background-color 600ms ease;
+  }
+  #player[data-playing="true"] .viz-cell {
+    background-color: theme('colors.sass.sauce');
+  }
+</style>
