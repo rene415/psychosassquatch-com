@@ -2,11 +2,11 @@
 import { tracks, socials } from '../data/tracks';
 const firstTrack = tracks[0];
 
-// PsychoSassquatch logo silhouette, traced via potrace from the PNG logo.
-// Drawn in a "math" coord system; the wrapping transform flips Y and scales
-// so the visible shape fills a 0 0 2592 2592 viewBox.
-const LOGO_PATH = 'M9810 16994 c-776 -30 -1513 -156 -2390 -409 -1188 -343 -2568 -930 -3780 -1608 -162 -91 -508 -295 -527 -311 -3 -3 35 -554 52 -761 218 -2562 795 -4747 1696 -6416 l68 -126 -24 -74 c-39 -125 -75 -331 -75 -435 0 -40 -3 -44 -75 -98 -364 -279 -506 -783 -332 -1179 13 -28 31 -92 41 -142 47 -240 119 -465 185 -573 49 -80 240 -290 331 -363 79 -63 215 -129 330 -161 75 -20 107 -23 280 -22 223 0 311 16 448 80 96 45 135 52 347 64 94 5 195 16 225 24 45 13 69 14 134 5 95 -13 201 -1 369 40 l118 28 77 -61 c635 -512 1410 -968 2212 -1303 201 -84 461 -183 480 -183 19 0 279 99 480 183 810 338 1572 788 2214 1306 92 75 177 142 187 150 16 12 28 8 96 -32 211 -123 455 -170 645 -124 57 14 59 14 140 -19 129 -51 232 -68 358 -59 161 11 179 10 265 -15 102 -30 324 -34 420 -8 33 9 87 19 120 23 253 30 507 217 589 436 13 35 47 161 75 279 28 121 66 251 85 297 112 263 83 525 -87 796 -108 172 -387 742 -462 942 l-65 175 87 163 c376 699 735 1598 991 2477 33 113 73 239 89 280 84 217 215 740 270 1075 13 80 31 158 39 174 9 16 30 88 47 159 39 156 79 391 134 779 53 372 73 530 95 700 47 369 53 478 31 526 -8 18 -78 70 -227 168 -2070 1366 -4280 2128 -6460 2225 -243 11 -341 11 -575 1z';
-const LOGO_TRANSFORM = 'translate(0,2592) scale(0.36,-0.36)';
+// PsychoSassquatch shield silhouette, traced via potrace from the user-uploaded
+// PsychoSassquatch_outline.png. Drawn in a "math" coord system; the wrapping
+// transform flips Y so the visible shape fills a 0 0 7200 7200 viewBox.
+const LOGO_PATH = 'M9615 16998 c-197 -10 -607 -56 -885 -99 -299 -45 -886 -175 -1175 -259 -422 -122 -696 -210 -970 -310 -93 -34 -231 -83 -305 -110 -210 -75 -769 -303 -1010 -412 -80 -36 -203 -92 -275 -123 -233 -103 -1186 -586 -1345 -681 -47 -28 -146 -86 -220 -129 -226 -131 -244 -142 -277 -177 -33 -35 -57 -103 -48 -140 2 -13 9 -104 15 -203 5 -99 14 -229 20 -290 5 -60 17 -189 25 -285 23 -266 43 -468 65 -645 50 -404 112 -859 130 -955 10 -58 26 -150 35 -205 35 -226 88 -497 178 -915 25 -113 50 -236 56 -275 7 -38 25 -112 42 -163 16 -51 29 -98 29 -105 0 -16 142 -520 214 -757 63 -211 200 -613 274 -805 27 -71 64 -175 81 -229 18 -55 48 -131 68 -170 19 -39 55 -122 80 -185 24 -63 59 -142 78 -175 19 -34 49 -97 68 -142 30 -68 101 -213 294 -596 42 -84 44 -127 9 -280 -14 -62 -32 -154 -39 -204 -20 -124 -36 -152 -140 -247 -150 -137 -226 -248 -280 -407 -82 -238 -88 -450 -22 -670 20 -69 61 -217 90 -330 103 -400 118 -432 309 -659 185 -219 396 -327 707 -360 164 -18 404 14 531 70 101 44 152 56 292 69 67 6 175 17 241 25 66 8 179 14 250 13 100 -1 154 4 232 20 114 25 155 27 186 11 37 -19 199 -130 247 -169 40 -33 91 -69 362 -253 476 -324 1100 -665 1633 -892 191 -81 491 -185 534 -185 71 0 435 138 766 290 253 116 580 280 692 347 73 43 185 109 250 147 157 91 396 248 673 440 237 164 292 205 367 276 120 114 155 120 304 51 160 -74 226 -86 464 -86 201 -1 213 -2 285 -27 118 -42 189 -51 335 -44 117 6 145 4 265 -20 168 -33 299 -29 519 16 232 46 330 96 463 233 114 117 149 196 219 490 27 115 61 237 75 271 62 148 67 172 68 331 1 235 -41 350 -264 725 -18 30 -45 82 -60 115 -15 33 -77 161 -138 285 -61 124 -127 272 -147 330 -56 161 -56 161 109 480 75 146 155 308 178 360 22 52 56 125 74 162 18 36 61 133 95 214 33 82 71 166 84 189 13 22 36 78 51 125 15 47 57 166 94 265 93 248 238 682 304 910 30 105 77 253 104 330 27 77 57 185 67 240 9 55 28 143 41 195 12 52 45 201 73 330 120 565 115 549 221 714 198 312 240 604 124 863 -35 78 -39 144 -20 293 47 374 75 631 101 935 9 99 20 223 25 275 16 162 34 544 27 572 -11 43 -53 84 -135 134 -42 26 -103 64 -135 86 -33 22 -99 60 -147 84 -49 24 -115 60 -147 81 -115 74 -1182 612 -1383 697 -63 27 -178 78 -255 114 -77 36 -183 82 -235 103 -52 20 -230 91 -395 157 -1701 681 -3154 979 -4440 910z';
+const LOGO_TRANSFORM = 'translate(0,7200) scale(0.36,-0.36)';
 
 // ── Triangle field generation (concentric rings spread across viewport) ──
 // Each gets per-triangle drift values so they bounce around independently.
@@ -170,29 +170,29 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         </svg>
 
         <!-- chromatic offset LOGO ghosts (RGB split, aggressive) -->
-        <svg viewBox="0 0 2592 2592" class="absolute inset-0 h-full w-full" aria-hidden="true">
+        <svg viewBox="0 0 7200 7200" class="absolute inset-0 h-full w-full" aria-hidden="true">
           <!-- cyan ghost, offset left -->
-          <g transform="translate(-130, 0)">
+          <g transform="translate(-360, 0)">
             <g transform={LOGO_TRANSFORM}>
-              <path d={LOGO_PATH} fill="none" stroke="#5dd7ff" stroke-width="60" opacity="0.75" filter="url(#rough-edges)"></path>
+              <path d={LOGO_PATH} fill="none" stroke="#5dd7ff" stroke-width="160" opacity="0.75" filter="url(#rough-edges)"></path>
             </g>
           </g>
           <!-- magenta ghost, offset right -->
-          <g transform="translate(130, 0)">
+          <g transform="translate(360, 0)">
             <g transform={LOGO_TRANSFORM}>
-              <path d={LOGO_PATH} fill="none" stroke="#ff5da4" stroke-width="60" opacity="0.75" filter="url(#rough-edges)"></path>
+              <path d={LOGO_PATH} fill="none" stroke="#ff5da4" stroke-width="160" opacity="0.75" filter="url(#rough-edges)"></path>
             </g>
           </g>
           <!-- lime ghost, offset up-right -->
-          <g transform="translate(60, -100)">
+          <g transform="translate(170, -280)">
             <g transform={LOGO_TRANSFORM}>
-              <path d={LOGO_PATH} fill="none" stroke="#a4ff5d" stroke-width="45" opacity="0.55" filter="url(#rough-edges-strong)"></path>
+              <path d={LOGO_PATH} fill="none" stroke="#a4ff5d" stroke-width="120" opacity="0.55" filter="url(#rough-edges-strong)"></path>
             </g>
           </g>
           <!-- sauce ghost, offset down -->
-          <g transform="translate(-20, 130)">
+          <g transform="translate(-60, 360)">
             <g transform={LOGO_TRANSFORM}>
-              <path d={LOGO_PATH} fill="none" stroke="#ff5d2a" stroke-width="50" opacity="0.65" filter="url(#rough-edges-strong)"></path>
+              <path d={LOGO_PATH} fill="none" stroke="#ff5d2a" stroke-width="140" opacity="0.65" filter="url(#rough-edges-strong)"></path>
             </g>
           </g>
         </svg>
@@ -215,14 +215,14 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         </div>
 
         <!-- main LOGO outline (rougher now) -->
-        <svg viewBox="0 0 2592 2592" class="absolute inset-0 h-full w-full" aria-hidden="true">
+        <svg viewBox="0 0 7200 7200" class="absolute inset-0 h-full w-full" aria-hidden="true">
           <g transform={LOGO_TRANSFORM}>
             <path
               id="tri-main"
               d={LOGO_PATH}
               fill="none"
               stroke="currentColor"
-              stroke-width="70"
+              stroke-width="180"
               opacity="0.95"
               filter="url(#rough-edges)"
               class="text-sass-ink"
@@ -811,10 +811,12 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 </script>
 
 <style>
-  /* ── Logo-shaped mask: cover art + fracture layer clipped to logo silhouette ── */
+  /* ── Logo-shaped mask: cover art + fracture layer clipped to shield silhouette ── */
+  /* Uses the user-supplied PsychoSassquatch_outline.png after we removed its    */
+  /* white background to make a real alpha mask.                                  */
   .logo-masked {
-    -webkit-mask-image: url('/logo/PsychoSassquatch-outline.svg');
-    mask-image: url('/logo/PsychoSassquatch-outline.svg');
+    -webkit-mask-image: url('/logo/PsychoSassquatch_outline_alpha.png');
+    mask-image: url('/logo/PsychoSassquatch_outline_alpha.png');
     -webkit-mask-size: contain;
     mask-size: contain;
     -webkit-mask-repeat: no-repeat;
