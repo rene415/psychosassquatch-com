@@ -2,32 +2,74 @@
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+
+const items = [
+  { title: 'Nugget Tee',    sub: "Soft cotton, nugget-and-sauce logo front and center.",                tag: 'nugget-tee' },
+  { title: 'Forest Hoodie', sub: "Heavy fleece, embroidered sasquatch on the chest.",                   tag: 'forest-hoodie' },
+  { title: 'Sticker Pack',  sub: "5 vinyl stickers · dishwasher safe (please don't).",                  tag: 'sticker-pack' },
+];
+const contactEmail = 'rene@reneramirez.me';
 ---
 
-<Base title="Merch — Psychosassquatch" description="Wear the fur. Tees, stickers, contraband.">
+<Base title="Merch — Psychosassquatch" description="Wear the fur. Tees, hoodies, stickers, contraband.">
   <Nav />
 
-  <main class="px-5 pt-32 md:px-10">
-    <section class="mx-auto max-w-6xl">
-      <p class="font-mono text-xs uppercase tracking-[0.35em] text-sass-ink/50">04 — Merch</p>
-      <h1 class="mt-3 font-display text-5xl md:text-7xl">Wear the fur.</h1>
-      <p class="mt-6 max-w-xl text-sass-ink/70">
-        Storefront goes here — could be a Shopify/Snipcart embed, could be Big Cartel,
-        could be Rene-just-DMs-you. TBD. For now: vaporware tees.
-      </p>
+  <main class="relative flex flex-1 flex-col overflow-hidden">
+    <!-- Ambient blobs matching the home-page atmosphere -->
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div class="absolute -left-32 top-1/4 h-[36rem] w-[36rem] rounded-full bg-sass-sauce/10 blur-[140px]"></div>
+      <div class="absolute -right-32 bottom-0 h-[28rem] w-[28rem] rounded-full bg-sass-glow/5 blur-[140px]"></div>
+    </div>
 
-      <div class="mt-12 grid gap-px overflow-hidden rounded-3xl border border-sass-ink/10 bg-sass-ink/5 md:grid-cols-3">
-        {['Nugget Tee', 'Forest Hoodie', 'Sticker Pack'].map((n, i) => (
-          <article class="bg-sass-bg p-8">
-            <div class="aspect-square rounded-2xl bg-sass-fur/30"></div>
-            <h2 class="mt-4 font-display text-xl">{n}</h2>
-            <p class="text-xs text-sass-ink/50">$— · sold by the forest</p>
-            <button class="mt-4 rounded-full border border-sass-ink/20 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-sass-ink/60" disabled>
-              Notify me
-            </button>
+    <section class="mx-auto w-full max-w-6xl px-5 pb-10 pt-24 md:px-10 md:pt-28">
+      <!-- Hero header ───────────────────────────────────────────────────── -->
+      <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <p class="font-mono text-xs uppercase tracking-[0.35em] text-sass-ink/50">04 — Merch</p>
+          <h1 class="mt-3 font-display text-5xl text-sass-ink md:text-7xl">
+            Wear the <span class="text-sass-sauce">fur</span>.
+          </h1>
+        </div>
+        <p class="max-w-sm pb-2 text-sm text-sass-ink/65">
+          Storefront's being sewn. Tees, hoodies, stickers, contraband incoming. Tap a card to hit "Notify me" — it just emails Rene, very lo-fi.
+        </p>
+      </div>
+
+      <!-- Product grid ──────────────────────────────────────────────────── -->
+      <div class="mt-10 grid gap-px overflow-hidden rounded-3xl border border-sass-ink/10 bg-sass-ink/5 md:grid-cols-3">
+        {items.map((it) => (
+          <article class="group relative bg-sass-bg p-6 transition-colors hover:bg-sass-ink/[0.03] md:p-7">
+            <!-- Visual card placeholder with triangle echo of the home player -->
+            <div class="relative aspect-square overflow-hidden rounded-2xl border border-sass-ink/10 bg-gradient-to-br from-sass-forest/40 via-sass-fur/20 to-sass-bg">
+              <svg viewBox="0 0 100 100" class="absolute inset-0 h-full w-full opacity-30 transition-all duration-500 group-hover:scale-105 group-hover:opacity-60" aria-hidden="true">
+                <polygon points="22,18 78,18 50,82" fill="none" stroke="currentColor" stroke-width="1" class="text-sass-ink/60"></polygon>
+              </svg>
+              <div class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-sass-bg/85 px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest text-sass-sauce backdrop-blur">
+                <span class="h-1.5 w-1.5 rounded-full bg-sass-sauce"></span>
+                coming soon
+              </div>
+            </div>
+
+            <div class="mt-5 flex items-baseline justify-between gap-3">
+              <h2 class="font-display text-xl text-sass-ink">{it.title}</h2>
+              <span class="font-mono text-[10px] uppercase tracking-widest text-sass-ink/40">$ —</span>
+            </div>
+            <p class="mt-1 text-xs text-sass-ink/55">{it.sub}</p>
+
+            <a
+              href={`mailto:${contactEmail}?subject=Notify%20me%20about%20Psychosassquatch%20%E2%80%94%20${encodeURIComponent(it.title)}&body=I'd%20like%20to%20be%20notified%20when%20${encodeURIComponent(it.title)}%20drops.`}
+              class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full border border-sass-ink/15 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-sass-ink/70 transition-colors hover:border-sass-sauce hover:text-sass-sauce"
+              data-item={it.tag}
+            >
+              Notify me ▾
+            </a>
           </article>
         ))}
       </div>
+
+      <p class="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.35em] text-sass-ink/40">
+        Or hit DM on <a href="https://www.instagram.com/psychosassquatch" target="_blank" rel="noopener" class="text-sass-ink hover:text-sass-sauce">@psychosassquatch</a> if you can't wait.
+      </p>
     </section>
   </main>
 
