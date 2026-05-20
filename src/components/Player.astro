@@ -8,9 +8,18 @@ const cells = Array.from({ length: ROWS * COLS }, (_, i) => i);
   id="player"
   data-track-src="/audio/demo.mp3"
   data-track-title="demo loop · synthesized in-browser"
-  class="relative grid min-h-dvh place-items-center px-5"
+  data-bg-src="/photos/hero-bg.jpg"
+  class="relative grid min-h-dvh place-items-center overflow-hidden px-5"
   aria-label="Psychosassquatch player"
 >
+  <!-- background image (audio-reactive). Hidden until JS confirms it loaded. -->
+  <div
+    id="player-bg"
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-0 -z-20 hidden bg-cover bg-center"
+    style="filter: blur(var(--bg-blur, 14px)) brightness(var(--bg-bright, 0.45)) saturate(var(--bg-sat, 0.95)); transform: scale(var(--bg-scale, 1.05));"
+  ></div>
+
   <!-- ambient blob backdrop -->
   <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
     <div class="absolute left-1/2 top-1/2 h-[60vmin] w-[60vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sass-sauce/10 blur-[140px]"></div>
@@ -86,6 +95,7 @@ const cells = Array.from({ length: ROWS * COLS }, (_, i) => i);
   const ring = document.getElementById('play-ring') as HTMLElement | null;
   const label = document.getElementById('track-label') as HTMLElement | null;
   const cells = Array.from(document.querySelectorAll<HTMLElement>('.viz-cell'));
+  const bg = document.getElementById('player-bg') as HTMLElement | null;
 
   if (!player || !btn || !barH || !barV || !ring || !label || cells.length === 0) {
     // Component DOM missing; bail out quietly
@@ -103,6 +113,20 @@ const cells = Array.from({ length: ROWS * COLS }, (_, i) => i);
       // Lower freq → center; higher freq → edges. fft 512 → 256 bins.
       return Math.min(255, Math.round((d / maxD) * 128));
     });
+
+    // ── Background image: probe and show if it exists ────────────────────
+    let bgLoaded = false;
+    const bgSrc = player.dataset.bgSrc || '';
+    if (bg && bgSrc) {
+      const probe = new Image();
+      probe.onload = () => {
+        bg.style.backgroundImage = `url("${bgSrc}")`;
+        bg.classList.remove('hidden');
+        bgLoaded = true;
+      };
+      probe.onerror = () => { /* silently leave hidden */ };
+      probe.src = bgSrc;
+    }
 
     // ── Idle "breathing" animation (anime.js v4 stagger from center) ─────
     const idleAnim = animate(cells, {
@@ -223,17 +247,36 @@ const cells = Array.from({ length: ROWS * COLS }, (_, i) => i);
     }
 
     // ── Visualizer render loop (drives transform via raw style for perf) ─
+    let bassSmoothed = 0;
     function tick() {
       if (!analyser || !freqData) return;
       analyser.getByteFrequencyData(freqData);
+
+      // Per-cell visualizer
       for (let i = 0; i < cells.length; i++) {
         const v = freqData[cellBin[i]] / 255;
-        // ease-out so quiet bins still pulse a little
         const s = 0.35 + Math.pow(v, 0.8) * 1.2;
         const op = 0.25 + Math.pow(v, 0.6) * 0.75;
         cells[i].style.transform = `scale(${s.toFixed(3)})`;
         cells[i].style.opacity = op.toFixed(3);
       }
+
+      // Audio-reactive background image (avg of lowest 8 bins → ~0–250 Hz)
+      if (bgLoaded && bg) {
+        let bass = 0;
+        for (let i = 0; i < 8; i++) bass += freqData[i];
+        bass = bass / (8 * 255); // 0..1
+        bassSmoothed = bassSmoothed * 0.75 + bass * 0.25;
+        const blur = (14 - bassSmoothed * 10).toFixed(2);          // 14 → 4
+        const bright = (0.45 + bassSmoothed * 0.45).toFixed(3);    // 0.45 → 0.9
+        const sat = (0.95 + bassSmoothed * 0.4).toFixed(3);        // 0.95 → 1.35
+        const scale = (1.05 + bassSmoothed * 0.06).toFixed(4);     // 1.05 → 1.11
+        bg.style.setProperty('--bg-blur', `${blur}px`);
+        bg.style.setProperty('--bg-bright', bright);
+        bg.style.setProperty('--bg-sat', sat);
+        bg.style.setProperty('--bg-scale', scale);
+      }
+
       rafId = requestAnimationFrame(tick);
     }
 
@@ -285,6 +328,18 @@ const cells = Array.from({ length: ROWS * COLS }, (_, i) => i);
       morphToPlus();
       if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       idleAnim.play();
+
+      // Settle the background image back to its calm state
+      if (bgLoaded && bg) {
+        animate(bg, {
+          '--bg-blur': '14px',
+          '--bg-bright': '0.45',
+          '--bg-sat': '0.95',
+          '--bg-scale': '1.05',
+          duration: 600,
+          ease: 'outQuad',
+        });
+      }
     }
 
     btn.addEventListener('click', () => {
