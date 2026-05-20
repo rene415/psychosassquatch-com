@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { ViewTransitions } from 'astro:transitions';
 
 interface Props {
   title?: string;
@@ -35,8 +36,17 @@ const {
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <ViewTransitions />
   </head>
   <body class="grain flex min-h-dvh flex-col">
     <slot />
+
+    <!-- ── Persistent audio element. Survives SPA navigation so music keeps playing across pages. -->
+    <audio
+      id="psy-audio"
+      preload="metadata"
+      crossorigin="anonymous"
+      transition:persist="psy-audio"
+    ></audio>
   </body>
 </html>

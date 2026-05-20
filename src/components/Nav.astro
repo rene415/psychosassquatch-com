@@ -1,6 +1,7 @@
 ---
 import { socials } from '../data/tracks';
 const path = Astro.url.pathname;
+const isHome = path === '/' || path === '';
 
 const brandColors: Record<string, string> = {
   'Spotify':     '#1DB954',
@@ -14,17 +15,35 @@ const brandColors: Record<string, string> = {
 
 <header class="fixed inset-x-0 top-0 z-30 px-5 py-4 md:px-10 md:py-6">
   <div class="flex items-center justify-between gap-4">
-    <a href="/" class="group inline-flex shrink-0 items-center gap-3" aria-label="Home">
-      <img
-        src="/logo/PsychoSassquatch.png"
-        alt=""
-        class="h-10 w-10 object-contain transition-transform duration-300 group-hover:rotate-[-8deg]"
-        onerror="this.style.display='none'"
-      />
-      <span class="hidden font-display text-sm uppercase tracking-[0.25em] text-sass-ink/80 group-hover:text-sass-ink sm:inline">
-        Psychosassquatch
-      </span>
-    </a>
+    <div class="flex shrink-0 items-center gap-4">
+      <a href="/" class="group inline-flex items-center gap-3" aria-label="Home">
+        <img
+          src="/logo/PsychoSassquatch.png"
+          alt=""
+          class="h-10 w-10 object-contain transition-transform duration-300 group-hover:rotate-[-8deg]"
+          onerror="this.style.display='none'"
+        />
+        <span class="hidden font-display text-sm uppercase tracking-[0.25em] text-sass-ink/80 group-hover:text-sass-ink sm:inline">
+          Psychosassquatch
+        </span>
+      </a>
+
+      {!isHome && (
+        <a
+          id="now-playing-pill"
+          href="/"
+          class="hidden items-center gap-2 rounded-full border border-sass-ink/15 bg-sass-bg/50 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-sass-ink/75 backdrop-blur transition-colors hover:border-sass-sauce hover:text-sass-sauce md:inline-flex"
+          aria-label="Now playing — go back to player"
+        >
+          <span class="now-playing-bars inline-flex h-3 items-end gap-[2px]" aria-hidden="true">
+            <span class="block w-[2px] bg-sass-sauce"></span>
+            <span class="block w-[2px] bg-sass-sauce"></span>
+            <span class="block w-[2px] bg-sass-sauce"></span>
+          </span>
+          <span id="now-playing-title">— —</span>
+        </a>
+      )}
+    </div>
 
     <div class="flex items-center gap-2 md:gap-3">
       <!-- Social icons (10% bigger than before; hover lights up brand color) -->
@@ -82,7 +101,60 @@ const brandColors: Record<string, string> = {
   </div>
 </header>
 
+<script>
+  import { tracks } from '../data/tracks';
+
+  function setupNowPlaying() {
+    const pill = document.getElementById('now-playing-pill');
+    if (!pill) return; // on home page, the pill isn't rendered
+
+    const audio = document.getElementById('psy-audio') as HTMLAudioElement | null;
+    const titleEl = document.getElementById('now-playing-title');
+    if (!audio || !titleEl) return;
+
+    function sync() {
+      const src = audio!.src ? decodeURIComponent(audio!.src) : '';
+      const idx = tracks.findIndex((t) => src.endsWith(t.audioSrc));
+      if (idx >= 0) {
+        titleEl!.textContent = tracks[idx].title;
+        pill!.classList.remove('hidden');
+        pill!.classList.add('md:inline-flex');
+        pill!.setAttribute('data-playing', audio!.paused ? 'false' : 'true');
+      } else {
+        pill!.classList.add('hidden');
+      }
+    }
+
+    sync();
+    audio.addEventListener('play', sync);
+    audio.addEventListener('pause', sync);
+    audio.addEventListener('loadedmetadata', sync);
+    audio.addEventListener('emptied', sync);
+  }
+
+  setupNowPlaying();
+  document.addEventListener('astro:page-load', setupNowPlaying);
+</script>
+
 <style>
   .social-icon { transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease; }
   .social-icon:hover { color: var(--brand); border-color: var(--brand); background-color: rgba(255,255,255,0.04); }
+
+  /* Now-playing bar visualizer in the nav pill */
+  .now-playing-bars span {
+    display: block;
+    height: 30%;
+    transform-origin: bottom;
+    animation: np-bar-bounce 0.9s ease-in-out infinite;
+  }
+  .now-playing-bars span:nth-child(2) { animation-delay: 0.15s; }
+  .now-playing-bars span:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes np-bar-bounce {
+    0%, 100% { height: 30%; }
+    50%      { height: 100%; }
+  }
+  #now-playing-pill[data-playing="false"] .now-playing-bars span {
+    animation-play-state: paused;
+    height: 30%;
+  }
 </style>

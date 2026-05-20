@@ -331,7 +331,11 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   </article>
 </div>
 
-<script>
+<script data-astro-rerun>
+  // Re-execute on every Astro SPA navigation (e.g., user navigated away to
+  // /merch and came back). Without this, the new Player DOM has no wired-up
+  // controls — audio keeps playing in the background but the play button
+  // does nothing.
   import { animate, stagger } from 'animejs';
   import { tracks } from '../data/tracks';
 
@@ -365,18 +369,27 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   const loreBody = document.getElementById('lore-modal-body') as HTMLElement | null;
 
   if (player && playBtn && skipPrev && skipNext && coverImg && titleEl && seekTrack && seekFill && tris.length) {
-    // ── Audio + analyser ─────────────────────────────────────────────────
-    let audioCtx: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let freqData: Uint8Array | null = null;
-    let mediaNode: MediaElementAudioSourceNode | null = null;
-    const audio = new Audio();
+    // ── Persistent audio + analyser ──────────────────────────────────────
+    // Audio element lives in Base.astro with transition:persist; the audio
+    // graph lives on window so it survives SPA navigation (we can't recreate
+    // a MediaElementAudioSourceNode for the same element — it throws).
+    interface PsyGraph {
+      ctx: AudioContext;
+      analyser: AnalyserNode;
+      freqData: Uint8Array;
+      mediaNode: MediaElementAudioSourceNode;
+    }
+    const audio = document.getElementById('psy-audio') as HTMLAudioElement | null;
+    if (!audio) return; // psy-audio missing from layout — bail silently
     audio.preload = 'metadata';
     audio.crossOrigin = 'anonymous';
 
+    let audioCtx: AudioContext | null = (window as any).__psyGraph?.ctx ?? null;
+    let analyser: AnalyserNode | null = (window as any).__psyGraph?.analyser ?? null;
+    let freqData: Uint8Array | null = (window as any).__psyGraph?.freqData ?? null;
+    let mediaNode: MediaElementAudioSourceNode | null = (window as any).__psyGraph?.mediaNode ?? null;
+
     let currentIdx = 0;
-    let isPlaying = false;
-    let rafId = 0;
 
     // ── Triangle → freq bin map (from data attribute) ─────────────────────
     const triBin = tris.map((t) => parseInt(t.dataset.bin || '0', 10));
@@ -573,9 +586,10 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       analyser.fftSize = 512;
       analyser.smoothingTimeConstant = 0.78;
       freqData = new Uint8Array(analyser.frequencyBinCount);
-      mediaNode = audioCtx.createMediaElementSource(audio);
+      mediaNode = audioCtx.createMediaElementSource(audio!);
       mediaNode.connect(analyser);
       analyser.connect(audioCtx.destination);
+      (window as any).__psyGraph = { ctx: audioCtx, analyser, freqData, mediaNode };
     }
 
     async function play() {
@@ -727,11 +741,37 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     loreClose?.addEventListener('click', closeLore);
     loreBackdrop?.addEventListener('click', closeLore);
 
-    // ── Random track on initial load (different each refresh) ───────────
-    // IMPORTANT: always call loadTrack — that's what wires audio.src.
-    // Without it, clicking Play on the initial track is a no-op.
-    const initialIdx = tracks.length > 1 ? Math.floor(Math.random() * tracks.length) : 0;
-    loadTrack(initialIdx, false);
+    // ── Initial load: random track on COLD load, sync on SPA nav back ────
+    // If audio.src already has a known track, the user came back from /merch
+    // and music may be playing. Sync UI to it without touching audio.src.
+    const existingSrc = audio.src ? decodeURIComponent(audio.src) : '';
+    const existingIdx = tracks.findIndex((t) => existingSrc.endsWith(t.audioSrc));
+
+    if (existingIdx >= 0) {
+      // Returning from another page — sync UI but don't reset audio.
+      currentIdx = existingIdx;
+      const t = tracks[currentIdx];
+      coverImg!.src = t.cover;
+      coverImg!.alt = t.title + ' cover art';
+      titleEl!.textContent = t.title;
+      if (noteEl) noteEl.textContent = t.note ?? ' ';
+      requestAnimationFrame(sampleCoverAccent);
+      if (!audio.paused) {
+        // Music is playing → flip UI to playing state, restart viz loop.
+        isPlaying = true;
+        player!.setAttribute('data-playing', 'true');
+        playBtn!.setAttribute('aria-pressed', 'true');
+        playBtn!.setAttribute('aria-label', 'Pause');
+        playIcon?.classList.add('hidden');
+        pauseIcon?.classList.remove('hidden');
+        explodeTriangles();
+        if (!rafId) tick();
+      }
+    } else {
+      // Cold load → pick a random track.
+      const initialIdx = tracks.length > 1 ? Math.floor(Math.random() * tracks.length) : 0;
+      loadTrack(initialIdx, false);
+    }
   }
 </script>
 
