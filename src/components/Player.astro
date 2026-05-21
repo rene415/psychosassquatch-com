@@ -441,6 +441,9 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     let analyser: AnalyserNode | null = (window as any).__psyGraph?.analyser ?? null;
     let freqData: Uint8Array | null = (window as any).__psyGraph?.freqData ?? null;
     let mediaNode: MediaElementAudioSourceNode | null = (window as any).__psyGraph?.mediaNode ?? null;
+    let gainNode: GainNode | null = (window as any).__psyGraph?.gain ?? null;
+    const FADE_SEC = 0.6;          // play/pause crossfade length
+    let pauseFadeTimer = 0;        // delayed audio.pause() after fade-out
 
     let currentIdx = 0;
     let isPlaying = !audio.paused && audio.currentTime > 0;
@@ -642,16 +645,30 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       analyser.fftSize = 512;
       analyser.smoothingTimeConstant = 0.78;
       freqData = new Uint8Array(analyser.frequencyBinCount);
+      gainNode = audioCtx.createGain();
+      gainNode.gain.value = 0;  // start silent; play() ramps to 1
       mediaNode = audioCtx.createMediaElementSource(audio!);
+      // mediaNode → analyser → gain → destination
+      // (gain AFTER analyser so the visualizer reads full-amplitude signal even during fade)
       mediaNode.connect(analyser);
-      analyser.connect(audioCtx.destination);
-      (window as any).__psyGraph = { ctx: audioCtx, analyser, freqData, mediaNode };
+      analyser.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      (window as any).__psyGraph = { ctx: audioCtx, analyser, freqData, mediaNode, gain: gainNode };
     }
 
     async function play() {
       ensureAudioGraph();
       if (audioCtx?.state === 'suspended') await audioCtx.resume();
+      // Cancel any pending pause-fade-out so we don't kill the new playback
+      if (pauseFadeTimer) { clearTimeout(pauseFadeTimer); pauseFadeTimer = 0; }
       try { await audio.play(); } catch (e) { console.warn('play() failed', e); return; }
+      // Smoothly ramp gain from current value (could be mid-fade) → 1
+      if (gainNode && audioCtx) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+        gainNode.gain.linearRampToValueAtTime(1.0, now + FADE_SEC);
+      }
       isPlaying = true;
       player!.setAttribute('data-playing', 'true');
       playBtn!.setAttribute('aria-pressed', 'true');
@@ -664,18 +681,36 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     }
 
     function pause() {
-      audio.pause();
+      // Ramp gain → 0 over FADE_SEC, then actually call audio.pause() after.
+      // Audio keeps playing through the analyser during the fade so the
+      // visualizer trails off naturally instead of cutting.
+      if (gainNode && audioCtx && !audio.paused) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + FADE_SEC);
+        clearTimeout(pauseFadeTimer);
+        pauseFadeTimer = window.setTimeout(() => {
+          audio.pause();
+          if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+          retractTriangles();
+          clearTimeout(burstTimer);
+          offsetSlice?.classList.add('hidden');
+        }, FADE_SEC * 1000);
+      } else {
+        // No audio context yet (never played) — just bail; nothing to pause.
+        audio.pause();
+        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+        retractTriangles();
+        clearTimeout(burstTimer);
+        offsetSlice?.classList.add('hidden');
+      }
       isPlaying = false;
       player!.setAttribute('data-playing', 'false');
       playBtn!.setAttribute('aria-pressed', 'false');
       playBtn!.setAttribute('aria-label', 'Play');
       playIcon?.classList.remove('hidden');
       pauseIcon?.classList.add('hidden');
-      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-      retractTriangles();
-      // Stop the datamosh burst loop & hide any in-flight slice immediately
-      clearTimeout(burstTimer);
-      offsetSlice?.classList.add('hidden');
       if (bgLoaded && bg) {
         animate(bg, {
           '--bg-blur': '0px', '--bg-bright': '0.7', '--bg-sat': '1', '--bg-scale': '1',

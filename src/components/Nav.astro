@@ -14,7 +14,8 @@ const brandColors: Record<string, string> = {
 ---
 
 <header class="fixed inset-x-0 top-0 z-30 px-5 py-4 md:px-10 md:py-6">
-  <div class="flex items-center justify-between gap-4">
+  <!-- 3-column layout: logo (left) | social icons (centered absolutely) | Merch (right) -->
+  <div class="relative flex items-center justify-between gap-4">
     <div class="flex shrink-0 items-center gap-4">
       <a href="/" class="group inline-flex items-center gap-3" aria-label="Home">
         <img
@@ -45,9 +46,8 @@ const brandColors: Record<string, string> = {
       )}
     </div>
 
-    <div class="flex items-center gap-2 md:gap-3">
-      <!-- Social icons (10% bigger than before; hover lights up brand color) -->
-      <ul class="flex items-center gap-1.5">
+    <!-- Social icons absolutely centered in the header row -->
+    <ul class="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 sm:flex">
         {socials.map((s) => (
           <li>
             <a
@@ -83,10 +83,10 @@ const brandColors: Record<string, string> = {
         ))}
       </ul>
 
-      <!-- Merch button (now safely separated from the social icons) -->
-      <nav aria-label="Primary" class="ml-1">
-        <a
-          href="/merch"
+    <!-- Merch button on the right -->
+    <nav aria-label="Primary" class="shrink-0">
+      <a
+        href="/merch"
           class:list={[
             'inline-flex h-10 items-center rounded-full border px-4 font-mono text-xs uppercase tracking-widest transition-colors duration-200',
             path.startsWith('/merch')
@@ -97,7 +97,6 @@ const brandColors: Record<string, string> = {
           Merch
         </a>
       </nav>
-    </div>
   </div>
 </header>
 

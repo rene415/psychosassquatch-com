@@ -37,6 +37,35 @@ const {
       rel="stylesheet"
     />
     <ViewTransitions />
+
+    <!-- ── Google Analytics (GA4) ──────────────────────────────────────── -->
+    <!-- Paste your GA4 Measurement ID below (looks like 'G-XXXXXXXXXX'),  -->
+    <!-- and the snippet auto-fires page_view events on every SPA route   -->
+    <!-- change via astro:page-load. While GA_ID is empty, the snippet    -->
+    <!-- is a no-op — nothing gets sent.                                    -->
+    <script is:inline>
+      window.__PSY_GA_ID = ''; // <-- e.g. 'G-ABCDEFGHIJ'
+    </script>
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-PLACEHOLDER"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      window.gtag = gtag;
+      gtag('js', new Date());
+      if (window.__PSY_GA_ID) {
+        gtag('config', window.__PSY_GA_ID, { send_page_view: false });
+        gtag('event', 'page_view', { page_path: location.pathname + location.search });
+      }
+      // Fire page_view on every SPA transition (Astro ClientRouter / ViewTransitions)
+      document.addEventListener('astro:page-load', () => {
+        if (window.__PSY_GA_ID) {
+          gtag('event', 'page_view', {
+            page_path: location.pathname + location.search,
+            page_title: document.title,
+          });
+        }
+      });
+    </script>
   </head>
   <body class="grain flex min-h-dvh flex-col">
     <slot />
