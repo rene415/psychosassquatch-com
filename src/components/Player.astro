@@ -520,7 +520,9 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 
     // ── Triangle expand/retract anims (replaces 13×13 idle breathing) ─────
     function explodeTriangles() {
-      // From hidden (translated to center, scale 0) → natural (translate 0, scale 1)
+      // Clear any inline transform left by the last tick() pass so anime.js
+      // starts from a clean state.
+      tris.forEach((t) => { t.style.transform = ''; t.style.opacity = ''; });
       animate(tris, {
         translateX: 0,
         translateY: 0,
@@ -531,12 +533,15 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       });
     }
     function retractTriangles() {
+      // Same — clear inline transform first so the anime.js animation isn't
+      // fighting the per-frame JS writes from the previous tick() loop.
+      tris.forEach((t) => { t.style.transform = ''; t.style.opacity = ''; });
       animate(tris, {
         translateX: (el: HTMLElement) => parseFloat(el.style.getPropertyValue('--hide-x')) || 0,
         translateY: (el: HTMLElement) => parseFloat(el.style.getPropertyValue('--hide-y')) || 0,
         scale: 0,
         opacity: 0,
-        duration: 700,
+        duration: 500,
         ease: 'inQuad',
         delay: stagger(5, { from: 'last' }),
       });
@@ -658,17 +663,32 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 
     async function play() {
       ensureAudioGraph();
-      if (audioCtx?.state === 'suspended') await audioCtx.resume();
-      // Cancel any pending pause-fade-out so we don't kill the new playback
+      if (audioCtx?.state === 'suspended') {
+        try { await audioCtx.resume(); } catch (_) {}
+      }
+      // Cancel any pending pause-fade so we don't pause the audio we're
+      // about to play. THIS MUST HAPPEN BEFORE audio.play() — otherwise the
+      // pauseFadeTimer can fire mid-startup and immediately re-pause us.
       if (pauseFadeTimer) { clearTimeout(pauseFadeTimer); pauseFadeTimer = 0; }
-      try { await audio.play(); } catch (e) { console.warn('play() failed', e); return; }
-      // Smoothly ramp gain from current value (could be mid-fade) → 1
+
+      // Try to start playback. iOS Safari can reject this if the click was
+      // technically outside a user-gesture window; bail cleanly if so.
+      try {
+        await audio.play();
+      } catch (e) {
+        console.warn('audio.play() rejected', e);
+        return;
+      }
+
+      // Ramp gain from wherever it is (could be 0 from a recent fade-out,
+      // or mid-fade if user mashed the button) → 1.0 over FADE_SEC.
       if (gainNode && audioCtx) {
         const now = audioCtx.currentTime;
         gainNode.gain.cancelScheduledValues(now);
         gainNode.gain.setValueAtTime(gainNode.gain.value, now);
         gainNode.gain.linearRampToValueAtTime(1.0, now + FADE_SEC);
       }
+
       isPlaying = true;
       player!.setAttribute('data-playing', 'true');
       playBtn!.setAttribute('aria-pressed', 'true');
@@ -681,9 +701,26 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     }
 
     function pause() {
-      // Ramp gain → 0 over FADE_SEC, then actually call audio.pause() after.
-      // Audio keeps playing through the analyser during the fade so the
-      // visualizer trails off naturally instead of cutting.
+      // Flip UI state + STOP all visualizer animations IMMEDIATELY so the
+      // user feels an instant response. Only the audio output fades over
+      // FADE_SEC; the visuals snap to paused state right away.
+      isPlaying = false;
+      player!.setAttribute('data-playing', 'false');
+      playBtn!.setAttribute('aria-pressed', 'false');
+      playBtn!.setAttribute('aria-label', 'Play');
+      playIcon?.classList.remove('hidden');
+      pauseIcon?.classList.add('hidden');
+
+      // Visualizer stops NOW (cancel RAF, retract triangles, kill burst loop,
+      // hide any in-flight slice).
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      clearTimeout(burstTimer);
+      offsetSlice?.classList.add('hidden');
+      retractTriangles();
+
+      // Audio: ramp gain → 0 then call audio.pause() after the fade completes.
+      // Audio keeps flowing through the analyser during the fade, but the
+      // visualizer isn't reading it anymore so there's no visible effect.
       if (gainNode && audioCtx && !audio.paused) {
         const now = audioCtx.currentTime;
         gainNode.gain.cancelScheduledValues(now);
@@ -691,26 +728,14 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         gainNode.gain.linearRampToValueAtTime(0, now + FADE_SEC);
         clearTimeout(pauseFadeTimer);
         pauseFadeTimer = window.setTimeout(() => {
-          audio.pause();
-          if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-          retractTriangles();
-          clearTimeout(burstTimer);
-          offsetSlice?.classList.add('hidden');
+          try { audio.pause(); } catch (_) {}
+          pauseFadeTimer = 0;
         }, FADE_SEC * 1000);
       } else {
-        // No audio context yet (never played) — just bail; nothing to pause.
-        audio.pause();
-        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-        retractTriangles();
-        clearTimeout(burstTimer);
-        offsetSlice?.classList.add('hidden');
+        // No audio context yet (cold pause), or already paused → just stop.
+        try { audio.pause(); } catch (_) {}
       }
-      isPlaying = false;
-      player!.setAttribute('data-playing', 'false');
-      playBtn!.setAttribute('aria-pressed', 'false');
-      playBtn!.setAttribute('aria-label', 'Play');
-      playIcon?.classList.remove('hidden');
-      pauseIcon?.classList.add('hidden');
+
       if (bgLoaded && bg) {
         animate(bg, {
           '--bg-blur': '0px', '--bg-bright': '0.7', '--bg-sat': '1', '--bg-scale': '1',
