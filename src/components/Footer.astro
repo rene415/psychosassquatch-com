@@ -12,14 +12,17 @@ const brandColors: Record<string, string> = {
 };
 ---
 
-<footer class="relative z-10 border-t border-sass-ink/10 px-6 py-3 md:px-10">
+<footer
+  class="relative z-10 border-t border-sass-ink/10 px-6 py-3 md:px-10"
+  style="padding-left: max(1.5rem, env(safe-area-inset-left)); padding-right: max(1.5rem, env(safe-area-inset-right)); padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
+>
   <!-- Single horizontal line: tagline · social links · copyright. Stretches full viewport. -->
   <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
     <div class="max-w-md">
-      <p class="font-display text-base text-sass-ink/85 md:text-lg">
+      <p class="font-display text-sm text-sass-ink/85 md:text-lg">
         squatch.exe is <span class="text-sass-sauce">always running</span>.
       </p>
-      <p class="mt-1 text-xs leading-relaxed text-sass-ink/55">
+      <p class="mt-1 hidden text-xs leading-relaxed text-sass-ink/55 sm:block">
         Music that will make you groove. Built in a basement. Lit by a single bulb. Probably also a candle. Definitely a candle.
       </p>
     </div>

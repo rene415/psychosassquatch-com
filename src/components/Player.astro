@@ -133,7 +133,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         id="play-btn"
         type="button"
         class="group relative grid place-items-center text-sass-ink focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-sass-sauce"
-        style="width:min(62vmin,506px); aspect-ratio:1;"
+        style="width:min(58vmin,380px); aspect-ratio:1;"
         aria-label="Play"
         aria-pressed="false"
       >
@@ -304,7 +304,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         <button
           id="skip-prev"
           type="button"
-          class="shrink-0 p-1 text-sass-ink/60 transition-colors hover:text-sass-sauce focus-visible:text-sass-sauce focus-visible:outline-none"
+          class="shrink-0 grid h-11 w-11 place-items-center text-sass-ink/60 transition-colors hover:text-sass-sauce focus-visible:text-sass-sauce focus-visible:outline-none md:h-12 md:w-12"
           aria-label="Previous track"
         >
           <svg viewBox="0 0 24 24" class="h-6 w-6 md:h-7 md:w-7" fill="currentColor" aria-hidden="true">
@@ -328,7 +328,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         <button
           id="skip-next"
           type="button"
-          class="shrink-0 p-1 text-sass-ink/60 transition-colors hover:text-sass-sauce focus-visible:text-sass-sauce focus-visible:outline-none"
+          class="shrink-0 grid h-11 w-11 place-items-center text-sass-ink/60 transition-colors hover:text-sass-sauce focus-visible:text-sass-sauce focus-visible:outline-none md:h-12 md:w-12"
           aria-label="Next track"
         >
           <svg viewBox="0 0 24 24" class="h-6 w-6 md:h-7 md:w-7" fill="currentColor" aria-hidden="true">
@@ -924,6 +924,14 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     animation: shield-breathe 2.8s ease-in-out infinite;
     transform-origin: center;
     will-change: transform;
+  }
+  /* Bigger shield on tablets and up */
+  @media (min-width: 768px) {
+    #play-btn { width: min(62vmin, 506px) !important; }
+  }
+  /* Cap the tap-hint ripple so it doesn't spill outside the shield on phones */
+  @media (max-width: 640px) {
+    .tap-ripple { width: 64px !important; height: 64px !important; }
   }
   #player[data-playing="true"] #play-btn {
     animation: none;
