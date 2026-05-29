@@ -458,12 +458,12 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 
     // ── Triangle → freq bin map (from data attribute) ─────────────────────
     const triBin = tris.map((t) => parseInt(t.dataset.bin || '0', 10));
-    // Phones: still skip the per-frame --rs/--rr triangle writes for paint
-    // budget reasons (47 setProperty calls/frame is meaningful on older
-    // phones). Audio reactivity works on mobile but doesn't drive triangle
-    // scale individually. Background blur audio-reactivity still runs on
-    // mobile too — that's just 4 setProperty calls/frame and worth keeping.
-    const isMobileVisualizer = window.matchMedia('(max-width: 480px)').matches;
+    // Triangle audio-reactivity is now enabled on ALL viewports. The
+    // previous mobile-skip was defensive coding from the era of the
+    // 'stuck visualizer' bug — that bug was rooted in MediaElementSource
+    // routing through a suspendable AudioContext, which we now bypass via
+    // captureStream. ~47 setProperty calls/frame is well within phone budget.
+    const isMobileVisualizer = false;
     const shapeEls = Array.from(document.querySelectorAll<SVGPolygonElement>('.shape'));
 
     // ── Shape morphing through song progress ──────────────────────────────
