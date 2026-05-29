@@ -652,18 +652,21 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       (window as any).__psyGraph = { ctx: audioCtx, analyser, freqData, mediaNode, gain: gainNode };
     }
 
+    // Mobile-vs-desktop split for play/pause behavior. On mobile we skip the
+    // Web Audio gain fade entirely — audio plays/pauses via the HTMLAudio
+    // element directly, no fade. The gain crossfade was the source of the
+    // 'song freezes after resume' bug: when AudioContext was suspended,
+    // audio.play() resolved but no sound came out because the analyser+gain
+    // chain was frozen. Direct audio.pause()/play() on mobile bypasses this.
+    const isMobileAudio = window.matchMedia('(max-width: 640px)').matches;
+
     async function play() {
       ensureAudioGraph();
-      if (audioCtx?.state === 'suspended') {
-        try { await audioCtx.resume(); } catch (_) {}
-      }
-      // Cancel any pending pause-fade so we don't pause the audio we're
-      // about to play. THIS MUST HAPPEN BEFORE audio.play() — otherwise the
-      // pauseFadeTimer can fire mid-startup and immediately re-pause us.
+      // Fire-and-forget context resume (do NOT await — would break user
+      // gesture context for audio.play() on iOS/Android).
+      if (audioCtx?.state === 'suspended') { audioCtx.resume().catch(() => {}); }
       if (pauseFadeTimer) { clearTimeout(pauseFadeTimer); pauseFadeTimer = 0; }
 
-      // Try to start playback. iOS Safari can reject this if the click was
-      // technically outside a user-gesture window; bail cleanly if so.
       try {
         await audio.play();
       } catch (e) {
@@ -671,13 +674,20 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         return;
       }
 
-      // Ramp gain from wherever it is (could be 0 from a recent fade-out,
-      // or mid-fade if user mashed the button) → 1.0 over FADE_SEC.
-      if (gainNode && audioCtx) {
-        const now = audioCtx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-        gainNode.gain.linearRampToValueAtTime(1.0, now + FADE_SEC);
+      if (isMobileAudio) {
+        // Mobile: jump gain straight to 1, no fade. Simple and reliable.
+        if (gainNode && audioCtx) {
+          gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+          gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime);
+        }
+      } else {
+        // Desktop: smooth ramp from current gain to 1.0
+        if (gainNode && audioCtx) {
+          const now = audioCtx.currentTime;
+          gainNode.gain.cancelScheduledValues(now);
+          gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+          gainNode.gain.linearRampToValueAtTime(1.0, now + FADE_SEC);
+        }
       }
 
       isPlaying = true;
@@ -692,9 +702,7 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     }
 
     function pause() {
-      // Flip UI state + STOP all visualizer animations IMMEDIATELY so the
-      // user feels an instant response. Only the audio output fades over
-      // FADE_SEC; the visuals snap to paused state right away.
+      // Flip UI state + stop all visualizer work IMMEDIATELY.
       isPlaying = false;
       player!.setAttribute('data-playing', 'false');
       playBtn!.setAttribute('aria-pressed', 'false');
@@ -702,17 +710,23 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       playIcon?.classList.remove('hidden');
       pauseIcon?.classList.add('hidden');
 
-      // Visualizer stops NOW (cancel RAF, retract triangles, kill burst loop,
-      // hide any in-flight slice).
       if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       clearTimeout(burstTimer);
       offsetSlice?.classList.add('hidden');
       retractTriangles();
 
-      // Audio: ramp gain → 0 then call audio.pause() after the fade completes.
-      // Audio keeps flowing through the analyser during the fade, but the
-      // visualizer isn't reading it anymore so there's no visible effect.
-      if (gainNode && audioCtx && !audio.paused) {
+      if (isMobileAudio) {
+        // Mobile: just stop the audio. No fade, no timer. Eliminates the
+        // race condition where pauseFadeTimer would fire during a play
+        // attempt and re-pause the audio.
+        try { audio.pause(); } catch (_) {}
+        if (gainNode && audioCtx) {
+          gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+          gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime); // keep gain at 1 for next play
+        }
+        clearTimeout(pauseFadeTimer); pauseFadeTimer = 0;
+      } else if (gainNode && audioCtx && !audio.paused) {
+        // Desktop: smooth gain ramp → 0, then audio.pause() after the fade.
         const now = audioCtx.currentTime;
         gainNode.gain.cancelScheduledValues(now);
         gainNode.gain.setValueAtTime(gainNode.gain.value, now);
@@ -723,7 +737,6 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
           pauseFadeTimer = 0;
         }, FADE_SEC * 1000);
       } else {
-        // No audio context yet (cold pause), or already paused → just stop.
         try { audio.pause(); } catch (_) {}
       }
 
@@ -800,7 +813,15 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     }
 
     // ── Wire controls ────────────────────────────────────────────────────
+    // Every user click is also our opportunity to re-wake the AudioContext.
+    // Mobile browsers (esp. Android Chrome) aggressively suspend it after
+    // ~30s of inactivity, and audio routed through MediaElementSource is
+    // SILENT when the context is suspended. Firing resume() fire-and-forget
+    // on every click guarantees that after the click, the context is on its
+    // way back to 'running' state — without an await that would break the
+    // synchronous user-gesture chain for audio.play().
     playBtn.addEventListener('click', () => {
+      if (audioCtx?.state === 'suspended') { audioCtx.resume().catch(() => {}); }
       tapHint?.classList.add('dismissed');
       if (isPlaying) pause(); else play();
     });
@@ -992,6 +1013,21 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     .viz-tri                 { transition: none !important; }
     .play-only,
     .play-only-block         { transition-duration: 0s !important; }
+
+    /* NUCLEAR OPTION: when NOT playing, take all the visualizer layers OUT */
+    /* of layout entirely. Not just opacity:0 — display:none, removed from   */
+    /* the render tree. No room for the compositor to leave anything stuck.  */
+    /* Browser doesn't paint these nodes at all when paused.                 */
+    #player[data-playing="false"] #viz-tris,
+    #player:not([data-playing]) #viz-tris,
+    #player[data-playing="false"] #speckles,
+    #player:not([data-playing]) #speckles,
+    #player[data-playing="false"] .play-only,
+    #player:not([data-playing]) .play-only,
+    #player[data-playing="false"] .play-only-block,
+    #player:not([data-playing]) .play-only-block {
+      display: none !important;
+    }
   }
   #player[data-playing="true"] #play-btn {
     animation: none;
