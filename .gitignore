@@ -7,3 +7,4 @@ node_modules/
 
 # Personal interview answers — keep local, never push
 interviews.txt
+docs/debug/
