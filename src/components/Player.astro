@@ -525,44 +525,23 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       probe.src = bgSrc;
     }
 
-    // ── Triangle expand/retract anims (replaces 13×13 idle breathing) ─────
-    function explodeTriangles() {
-      // Clear any inline transform left by the last tick() pass so anime.js
-      // starts from a clean state.
-      tris.forEach((t) => { t.style.transform = ''; t.style.opacity = ''; });
-      animate(tris, {
-        translateX: 0,
-        translateY: 0,
-        scale: [{ to: 1, duration: 900, ease: 'outElastic(1, 0.55)' }],
-        opacity: [{ to: 1, duration: 500 }],
-        rotate: (el: HTMLElement) => parseFloat(el.style.getPropertyValue('--tri-rot')) || 0,
-        delay: stagger(8, { from: 'center' }),
-      });
-    }
-    function retractTriangles() {
-      // Same — clear inline transform first so the anime.js animation isn't
-      // fighting the per-frame JS writes from the previous tick() loop.
-      tris.forEach((t) => { t.style.transform = ''; t.style.opacity = ''; });
-      animate(tris, {
-        translateX: (el: HTMLElement) => parseFloat(el.style.getPropertyValue('--hide-x')) || 0,
-        translateY: (el: HTMLElement) => parseFloat(el.style.getPropertyValue('--hide-y')) || 0,
-        scale: 0,
-        opacity: 0,
-        duration: 500,
-        ease: 'inQuad',
-        delay: stagger(5, { from: 'last' }),
-      });
-    }
-    // Start hidden behind the cover
-    setTimeout(() => {
-      computeHideOffsets();
+    // ── Triangle show/hide (CSS-only, driven by [data-playing]) ──────────
+    // No more anime.js for explode/retract. CSS handles fade in/out via
+    // data-playing attribute. tick() writes --rs / --rr CSS vars and the
+    // transform composes cleanly. This eliminates the JS-vs-CSS transform
+    // fight that was leaving triangles stuck mid-animation on phones.
+    function clearTriangleReactiveVars() {
       tris.forEach((t) => {
-        const hx = parseFloat(t.style.getPropertyValue('--hide-x')) || 0;
-        const hy = parseFloat(t.style.getPropertyValue('--hide-y')) || 0;
-        t.style.transform = `translate(${hx}px, ${hy}px) scale(0)`;
-        t.style.opacity = '0';
+        t.style.removeProperty('--rs');
+        t.style.removeProperty('--rr');
+        // Defensive: also remove any legacy inline transform/opacity from
+        // earlier builds in case it lingers in cached DOM.
+        if (t.style.transform) t.style.transform = '';
+        if (t.style.opacity) t.style.opacity = '';
       });
-    }, 50);
+    }
+    function explodeTriangles() { clearTriangleReactiveVars(); }
+    function retractTriangles() { clearTriangleReactiveVars(); }
 
     // ── Glitch slice animation (5 bars, faster) ──────────────────────────
     glitchBars.forEach((bar, i) => {
@@ -758,15 +737,15 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       analyser.getByteFrequencyData(freqData);
 
       // Triangle field: each tri pulses scale + rotation per its freq bin
-      // (lower opacity baseline so shapes feel ethereal, not painted-on)
+      // via CSS variables. CSS composes the centering transform with these
+      // — JS never writes to .style.transform directly.
       for (let i = 0; i < tris.length; i++) {
         const v = freqData[triBin[i]] / 255;
         const s = 0.85 + Math.pow(v, 0.7) * 1.6;
-        const op = 0.15 + Math.pow(v, 0.55) * 0.55;
         const rotBase = parseFloat(tris[i].style.getPropertyValue('--tri-rot')) || 0;
         const rot = rotBase + v * 30;
-        tris[i].style.transform = `translate(0px, 0px) scale(${s.toFixed(3)}) rotate(${rot.toFixed(1)}deg)`;
-        tris[i].style.opacity = op.toFixed(3);
+        tris[i].style.setProperty('--rs', s.toFixed(3));
+        tris[i].style.setProperty('--rr', `${rot.toFixed(1)}deg`);
       }
 
       // Shape morph based on song progress
@@ -1043,23 +1022,30 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   }
 
   /* ── Triangle field cells ─────────────────────────────────────────── */
+  /* IMPORTANT: transform composes centering + audio-reactive scale/rotation */
+  /* via CSS custom properties. tick() writes --rs and --rr only, never the  */
+  /* transform property itself — that way CSS controls positioning and there */
+  /* is no JS-vs-CSS fight over transform writes (which used to leave        */
+  /* triangles stuck mid-animation on tight-vsync phones like S26 Ultra).    */
   .viz-tri {
     position: absolute;
     transform-origin: center;
     will-change: transform, opacity;
     color: var(--accent, theme('colors.sass.sauce'));
-    margin-left: calc(var(--w, 0) / -2);
-    margin-top: calc(var(--w, 0) / -2);
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(var(--rs, 1)) rotate(var(--rr, 0deg));
     mix-blend-mode: screen;
     filter: drop-shadow(0 0 0.5vmin var(--accent-soft, rgba(255,93,42,0.4)));
+    opacity: 0;
+    transition: opacity 0.35s ease;
   }
   .viz-tri svg { display: block; }
-
-  /* When NOT playing, mute color to ink/ghost; when playing, accent */
-  #player[data-playing="false"] .viz-tri,
-  #player:not([data-playing]) .viz-tri { color: theme('colors.sass.ink' / 30%); }
-  #player[data-playing="true"] .viz-tri { color: var(--accent, theme('colors.sass.sauce')); }
+  /* When playing, fade triangles in. When not playing, they fade out and the */
+  /* audio-reactive vars (--rs/--rr) get cleared by JS in pause().            */
+  #player[data-playing="true"] .viz-tri { opacity: 1; }
+  /* Mobile: snappier fade so pause feels instant (no waiting for transition) */
+  @media (max-width: 640px) {
+    .viz-tri { transition-duration: 0.12s; }
+  }
 
   /* ── Floating speckles (boosted: bigger, brighter, glow harder) ───── */
   .speckle {
