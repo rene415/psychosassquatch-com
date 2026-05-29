@@ -458,11 +458,12 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 
     // ── Triangle → freq bin map (from data attribute) ─────────────────────
     const triBin = tris.map((t) => parseInt(t.dataset.bin || '0', 10));
-    // On phones, skip the per-frame --rs/--rr writes entirely. CSS opacity
-    // alone handles show/hide, no JS animation cost, no possibility of stuck
-    // intermediate states. Triangles still appear when playing, they just
-    // don't scale/rotate with bass on mobile.
-    const isMobileVisualizer = window.matchMedia('(max-width: 640px)').matches;
+    // Phones: still skip the per-frame --rs/--rr triangle writes for paint
+    // budget reasons (47 setProperty calls/frame is meaningful on older
+    // phones). Audio reactivity works on mobile but doesn't drive triangle
+    // scale individually. Background blur audio-reactivity still runs on
+    // mobile too — that's just 4 setProperty calls/frame and worth keeping.
+    const isMobileVisualizer = window.matchMedia('(max-width: 480px)').matches;
     const shapeEls = Array.from(document.querySelectorAll<SVGPolygonElement>('.shape'));
 
     // ── Shape morphing through song progress ──────────────────────────────
@@ -634,48 +635,62 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       if (autoplay) play();
     }
 
-    // Detect Chromium-based browsers (Chrome, Edge, Opera, Brave, Vivaldi etc).
-    // User confirmed the freeze/silent-after-pause bug ONLY reproduces on
-    // Chrome desktop + mobile — Firefox works fine. The root cause is
-    // Chromium's aggressive AudioContext-suspend behavior: after the audio
-    // element is paused, the context is suspended; on next play(), the
-    // MediaElementAudioSourceNode → destination chain doesn't always wake
-    // up cleanly even after audioCtx.resume(). Firefox doesn't suspend
-    // aggressively so the bug doesn't manifest there.
-    // Fix: skip the entire Web Audio graph on Chromium. Audio plays through
-    // HTMLMediaElement direct to speakers — no MediaElementSource, no
-    // analyser, no gain, no graph to break.
-    const isChromium = /Chrome|Chromium|Edg\/|OPR\//i.test(navigator.userAgent);
-    const skipWebAudio = isChromium || window.matchMedia('(max-width: 640px)').matches;
+    // ── NEW STRATEGY: captureStream-based analyser tap ───────────────────
+    // The audio element plays directly to the device speakers (HTMLMediaElement
+    // default sink) — no createMediaElementSource hijacking the output. To
+    // power the audio-reactive visualizer, we instead use audio.captureStream()
+    // to get a MediaStream of what's playing, then wire that through a
+    // MediaStreamAudioSourceNode → AnalyserNode (no destination connection).
+    //
+    // Why this fixes the Chromium freeze: audio output never depends on the
+    // AudioContext, so even if Chrome suspends the context, audio keeps
+    // playing through the speakers. The analyser is just a 'side channel'
+    // that goes quiet when the context is suspended — visualizer pauses but
+    // audio doesn't. When the context resumes, analyser data flows again.
+    //
+    // No more isChromium UA sniff, no more skipWebAudio bypass. One code path
+    // for everyone, full reactive visualizer everywhere.
+    let captureSrc: MediaStreamAudioSourceNode | null = null;
 
     function ensureAudioGraph() {
       if (audioCtx) return;
-      if (skipWebAudio) return;
       audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
       analyser.smoothingTimeConstant = 0.78;
       freqData = new Uint8Array(analyser.frequencyBinCount);
-      gainNode = audioCtx.createGain();
-      gainNode.gain.value = 0;  // start silent; play() ramps to 1
-      mediaNode = audioCtx.createMediaElementSource(audio!);
-      // mediaNode → analyser → gain → destination
-      // (gain AFTER analyser so the visualizer reads full-amplitude signal even during fade)
-      mediaNode.connect(analyser);
-      analyser.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      (window as any).__psyGraph = { ctx: audioCtx, analyser, freqData, mediaNode, gain: gainNode };
+      // No mediaNode, no gainNode, no destination connection — the analyser
+      // is wired lazily via captureStream on first play() so audio output
+      // path stays untouched.
+      (window as any).__psyGraph = { ctx: audioCtx, analyser, freqData };
     }
 
-    // Mobile-vs-desktop split for play/pause behavior. On mobile we skip the
-    // Web Audio gain fade entirely — audio plays/pauses via the HTMLAudio
-    // element directly, no fade. The gain crossfade was the source of the
-    // 'song freezes after resume' bug: when AudioContext was suspended,
-    // audio.play() resolved but no sound came out because the analyser+gain
-    // chain was frozen. Direct audio.pause()/play() on mobile bypasses this.
-    // isMobileAudio kept for backwards-compat readability — same semantic as
-    // skipWebAudio for the play/pause branches below.
-    const isMobileAudio = skipWebAudio;
+    function ensureCaptureTap() {
+      // Lazy wire-up of the analyser to the audio output. Must run AFTER
+      // audio.play() at least once (some browsers return a silent stream
+      // until playback starts). Safe to call multiple times — bails if
+      // already wired.
+      if (captureSrc || !audioCtx || !analyser || !audio) return;
+      if (typeof (audio as any).captureStream !== 'function') {
+        // Browser doesn't support captureStream (very old). Visualizer just
+        // won't react to audio — everything else still works.
+        return;
+      }
+      try {
+        const stream = (audio as any).captureStream();
+        captureSrc = audioCtx.createMediaStreamSource(stream);
+        captureSrc.connect(analyser);
+        // NB: deliberately do NOT connect to audioCtx.destination — audio is
+        // already playing through the HTMLMediaElement default sink. This is
+        // a read-only analyser tap.
+      } catch (e) {
+        console.warn('captureStream tap failed', e);
+      }
+    }
+
+    // No more per-browser audio branch. Everyone uses HTMLMediaElement
+    // direct playback + captureStream analyser tap.
+    const isMobileAudio = false;
 
     async function play() {
       ensureAudioGraph();
@@ -691,21 +706,12 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         return;
       }
 
-      if (isMobileAudio) {
-        // Mobile: jump gain straight to 1, no fade. Simple and reliable.
-        if (gainNode && audioCtx) {
-          gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-          gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime);
-        }
-      } else {
-        // Desktop: smooth ramp from current gain to 1.0
-        if (gainNode && audioCtx) {
-          const now = audioCtx.currentTime;
-          gainNode.gain.cancelScheduledValues(now);
-          gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-          gainNode.gain.linearRampToValueAtTime(1.0, now + FADE_SEC);
-        }
-      }
+      // Now that audio is actually playing, lazily wire the captureStream
+      // analyser tap (safe to call repeatedly — bails if already wired).
+      ensureCaptureTap();
+
+      // No more gain node — audio plays at the element's own volume. Fades
+      // would require gain routing which is what we removed to fix Chromium.
 
       isPlaying = true;
       player!.setAttribute('data-playing', 'true');
@@ -732,30 +738,10 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       offsetSlice?.classList.add('hidden');
       retractTriangles();
 
-      if (isMobileAudio) {
-        // Mobile: just stop the audio. No fade, no timer. Eliminates the
-        // race condition where pauseFadeTimer would fire during a play
-        // attempt and re-pause the audio.
-        try { audio.pause(); } catch (_) {}
-        if (gainNode && audioCtx) {
-          gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-          gainNode.gain.setValueAtTime(1.0, audioCtx.currentTime); // keep gain at 1 for next play
-        }
-        clearTimeout(pauseFadeTimer); pauseFadeTimer = 0;
-      } else if (gainNode && audioCtx && !audio.paused) {
-        // Desktop: smooth gain ramp → 0, then audio.pause() after the fade.
-        const now = audioCtx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + FADE_SEC);
-        clearTimeout(pauseFadeTimer);
-        pauseFadeTimer = window.setTimeout(() => {
-          try { audio.pause(); } catch (_) {}
-          pauseFadeTimer = 0;
-        }, FADE_SEC * 1000);
-      } else {
-        try { audio.pause(); } catch (_) {}
-      }
+      // No gain node anymore — audio is on HTMLMediaElement's default sink.
+      // Pause is a direct call, instant, no fade. Same path everywhere.
+      try { audio.pause(); } catch (_) {}
+      clearTimeout(pauseFadeTimer); pauseFadeTimer = 0;
 
       if (bgLoaded && bg) {
         animate(bg, {
