@@ -634,18 +634,23 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       if (autoplay) play();
     }
 
+    // Detect Chromium-based browsers (Chrome, Edge, Opera, Brave, Vivaldi etc).
+    // User confirmed the freeze/silent-after-pause bug ONLY reproduces on
+    // Chrome desktop + mobile — Firefox works fine. The root cause is
+    // Chromium's aggressive AudioContext-suspend behavior: after the audio
+    // element is paused, the context is suspended; on next play(), the
+    // MediaElementAudioSourceNode → destination chain doesn't always wake
+    // up cleanly even after audioCtx.resume(). Firefox doesn't suspend
+    // aggressively so the bug doesn't manifest there.
+    // Fix: skip the entire Web Audio graph on Chromium. Audio plays through
+    // HTMLMediaElement direct to speakers — no MediaElementSource, no
+    // analyser, no gain, no graph to break.
+    const isChromium = /Chrome|Chromium|Edg\/|OPR\//i.test(navigator.userAgent);
+    const skipWebAudio = isChromium || window.matchMedia('(max-width: 640px)').matches;
+
     function ensureAudioGraph() {
       if (audioCtx) return;
-      // MOBILE: skip Web Audio entirely. Audio plays through HTMLMediaElement
-      // direct to speakers, no MediaElementAudioSourceNode in the way.
-      // Chrome's stricter AudioContext-suspend behavior was silencing audio
-      // after pause/play cycles even when audio.play() succeeded; the cure
-      // is to not route audio through a suspendable context at all on phones.
-      // Per-frame audio reactivity (triangle scale, bg blur) is already
-      // disabled on mobile via isMobileVisualizer, so we lose nothing.
-      // Firefox doesn't have this bug because it doesn't aggressively suspend
-      // contexts mid-session.
-      if (window.matchMedia('(max-width: 640px)').matches) return;
+      if (skipWebAudio) return;
       audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
@@ -668,7 +673,9 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     // 'song freezes after resume' bug: when AudioContext was suspended,
     // audio.play() resolved but no sound came out because the analyser+gain
     // chain was frozen. Direct audio.pause()/play() on mobile bypasses this.
-    const isMobileAudio = window.matchMedia('(max-width: 640px)').matches;
+    // isMobileAudio kept for backwards-compat readability — same semantic as
+    // skipWebAudio for the play/pause branches below.
+    const isMobileAudio = skipWebAudio;
 
     async function play() {
       ensureAudioGraph();
