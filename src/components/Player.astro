@@ -636,6 +636,16 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 
     function ensureAudioGraph() {
       if (audioCtx) return;
+      // MOBILE: skip Web Audio entirely. Audio plays through HTMLMediaElement
+      // direct to speakers, no MediaElementAudioSourceNode in the way.
+      // Chrome's stricter AudioContext-suspend behavior was silencing audio
+      // after pause/play cycles even when audio.play() succeeded; the cure
+      // is to not route audio through a suspendable context at all on phones.
+      // Per-frame audio reactivity (triangle scale, bg blur) is already
+      // disabled on mobile via isMobileVisualizer, so we lose nothing.
+      // Firefox doesn't have this bug because it doesn't aggressively suspend
+      // contexts mid-session.
+      if (window.matchMedia('(max-width: 640px)').matches) return;
       audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
@@ -751,7 +761,13 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
     // ── Visualizer + bg + progress render loop ───────────────────────────
     let bassSmoothed = 0;
     function tick() {
-      if (!analyser || !freqData) { rafId = requestAnimationFrame(tick); return; }
+      // No analyser (mobile): just drive shape-morph progress and reschedule.
+      // No audio reactivity, no triangle/bg writes — saves a TON of CPU.
+      if (!analyser || !freqData) {
+        checkShapeMorph();
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
       analyser.getByteFrequencyData(freqData);
 
       // Triangle field: only do the per-tri CSS-var writes on desktop. On
