@@ -458,6 +458,11 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
 
     // ── Triangle → freq bin map (from data attribute) ─────────────────────
     const triBin = tris.map((t) => parseInt(t.dataset.bin || '0', 10));
+    // On phones, skip the per-frame --rs/--rr writes entirely. CSS opacity
+    // alone handles show/hide, no JS animation cost, no possibility of stuck
+    // intermediate states. Triangles still appear when playing, they just
+    // don't scale/rotate with bass on mobile.
+    const isMobileVisualizer = window.matchMedia('(max-width: 640px)').matches;
     const shapeEls = Array.from(document.querySelectorAll<SVGPolygonElement>('.shape'));
 
     // ── Shape morphing through song progress ──────────────────────────────
@@ -736,16 +741,19 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
       if (!analyser || !freqData) { rafId = requestAnimationFrame(tick); return; }
       analyser.getByteFrequencyData(freqData);
 
-      // Triangle field: each tri pulses scale + rotation per its freq bin
-      // via CSS variables. CSS composes the centering transform with these
-      // — JS never writes to .style.transform directly.
-      for (let i = 0; i < tris.length; i++) {
-        const v = freqData[triBin[i]] / 255;
-        const s = 0.85 + Math.pow(v, 0.7) * 1.6;
-        const rotBase = parseFloat(tris[i].style.getPropertyValue('--tri-rot')) || 0;
-        const rot = rotBase + v * 30;
-        tris[i].style.setProperty('--rs', s.toFixed(3));
-        tris[i].style.setProperty('--rr', `${rot.toFixed(1)}deg`);
+      // Triangle field: only do the per-tri CSS-var writes on desktop. On
+      // mobile, isMobileVisualizer skips the loop entirely — triangles appear
+      // via CSS opacity but don't react to audio. Saves ~70 setProperty calls
+      // per frame on phones.
+      if (!isMobileVisualizer) {
+        for (let i = 0; i < tris.length; i++) {
+          const v = freqData[triBin[i]] / 255;
+          const s = 0.85 + Math.pow(v, 0.7) * 1.6;
+          const rotBase = parseFloat(tris[i].style.getPropertyValue('--tri-rot')) || 0;
+          const rot = rotBase + v * 30;
+          tris[i].style.setProperty('--rs', s.toFixed(3));
+          tris[i].style.setProperty('--rr', `${rot.toFixed(1)}deg`);
+        }
       }
 
       // Shape morph based on song progress
@@ -946,27 +954,44 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
   }
 
   /* ── MOBILE PERF + PAUSE-RESPONSIVENESS PASS ───────────────────────────── */
-  /* Phones got bogged down by 140 viz triangles + 80 speckles + 4 chromatic */
-  /* ghosts + datamosh filter all painting at once, and the .play-only       */
-  /* transitions were too slow to keep up — pause felt laggy.                */
+  /* The visualizer triangles used to be golden-angle-spirals across the     */
+  /* whole viewport — fine on a wide desktop, but on a tall phone they       */
+  /* covered the Now Playing text, the controls, and even the footer. On     */
+  /* the S26 Ultra's 120Hz display, repainting 70 triangles across the       */
+  /* entire screen during a pause transition causes visible stutter.         */
   /* Below 640px we:                                                          */
-  /*   – hide every other viz-tri  (140 → ~70 visible)                       */
-  /*   – hide every other speckle  (80  → ~40 visible)                       */
-  /*   – drop the 2 'extra' chromatic ghosts (lime + sauce)                  */
+  /*   – constrain #viz-tris to a square area centered on the shield, so    */
+  /*     triangles cluster around the cover instead of spreading viewport-  */
+  /*     wide                                                                 */
+  /*   – drop count further: hide 2 of every 3 viz-tri  (~47 visible)        */
+  /*   – hide every other speckle  (80 → ~40)                                */
+  /*   – drop the 2 'extra' chromatic ghosts (lime + sauce → cyan + magenta) */
   /*   – disable the datamosh feDisplacementMap filter on the cover          */
-  /*   – disable the offset-slice burst (pure CPU win)                       */
-  /*   – disable the per-triangle viz-tri-drift CSS keyframe                 */
-  /*   – snap the .play-only / .play-only-block transitions to instant       */
-  /*     so pause feedback is immediate.                                      */
+  /*   – disable the offset-slice burst                                       */
+  /*   – disable per-triangle viz-tri-drift CSS keyframe                     */
+  /*   – kill the .viz-tri opacity transition (instant show/hide)            */
+  /*   – snap .play-only / .play-only-block transitions to 0                 */
   @media (max-width: 640px) {
-    .viz-tri:nth-child(2n) { display: none !important; }
-    .speckle:nth-child(2n) { display: none !important; }
-    .ghost-extra            { display: none !important; }
-    #cover-clip             { filter: none !important; }
-    #offset-slice           { display: none !important; }
-    .viz-tri-drift          { animation: none !important; }
+    #viz-tris {
+      inset: auto !important;
+      left: 50% !important;
+      top: 50% !important;
+      width: 92vmin !important;
+      height: 92vmin !important;
+      max-width: 440px !important;
+      max-height: 440px !important;
+      transform: translate(-50%, -50%);
+    }
+    .viz-tri:nth-child(3n+1),
+    .viz-tri:nth-child(3n+2) { display: none !important; }
+    .speckle:nth-child(2n)   { display: none !important; }
+    .ghost-extra             { display: none !important; }
+    #cover-clip              { filter: none !important; }
+    #offset-slice            { display: none !important; }
+    .viz-tri-drift           { animation: none !important; }
+    .viz-tri                 { transition: none !important; }
     .play-only,
-    .play-only-block        { transition-duration: 0s !important; }
+    .play-only-block         { transition-duration: 0s !important; }
   }
   #player[data-playing="true"] #play-btn {
     animation: none;
