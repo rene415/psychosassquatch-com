@@ -74,7 +74,7 @@ I learned more about music production on this song than on anything before it. M
   },
   {
     title: 'Chaos',
-    releaseDate: '2023-05-11',
+    releaseDate: '2023-10-15',
     spotifyId: '4VhrsHNelF9aMRNe7wKUlm',
     audioSrc: '/audio/Chaos - Psychosassquatch.mp3',
     cover: '/covers/Chaos.jpg',
