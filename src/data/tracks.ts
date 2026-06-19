@@ -74,11 +74,23 @@ I learned more about music production on this song than on anything before it. M
   },
   {
     title: 'Chaos',
-    releaseDate: '2023-10-15',
+    releaseDate: '2023-05-11',
     spotifyId: '4VhrsHNelF9aMRNe7wKUlm',
     audioSrc: '/audio/Chaos - Psychosassquatch.mp3',
     cover: '/covers/Chaos.jpg',
-    lore: 'Lore pending — interview in progress.',
+    lore: `Started May 11, 2023. One of the few songs I finished almost in one sit-down — I usually drag tracks out over weeks. This one just landed.
+
+The whole song hangs off a bass line with octave jumps. I built it three layers deep so the groove sits right: a sub you can actually feel, a mid running Serum's "BA Oliver Analog Funk," and a fuller sound on top ("BASS 05 Juno"). The "drop" — if you can call it that — is just me nudging the bass forward in the grid by a tick. That one tiny shift unlocks the whole groove. Then I walk it up and down with octave jumps for movement.
+
+Drums are deliberately simple: kick, hat, shaker. There's a TVD resampled tribe sample at the top (Splice) that's pretty obvious — gives the intro a jungle feel before the bass takes over.
+
+Pads are where I went full French-house brain: one pad synth at first, then every 8-16 bars I'd stack another. Classic Brass Pad → FSS FPE PAD Magnetic (that one does a little swirl-up that detunes everything in a way I love) → Serum's ambient forest synth (another detune, countering the Magnetic one's swirl) → piano dogwood preset running an arpeggio at 1/16, 2-step, 16 swing for that skipped, half-stumbling feel.
+
+Three string staccatos stacked underneath for an eerie tension.
+
+The leads are embarrassingly simple — a tiny melody answering itself. Call-and-response with the SAME instrument because I hadn't figured out the proper technique yet. After this song I went and learned how to do call-and-response between different voices. You can hear me almost figuring it out in real time on this one.
+
+Closes out with Oliver guitar loops (Splice, like everyone else) for a quick funk break — feels like its own little beat punching through.`,
   },
   {
     title: 'Greenmoon',
