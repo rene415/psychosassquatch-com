@@ -927,8 +927,19 @@ const speckles = Array.from({ length: N_SPECKLES }, (_, i) => {
         if (!rafId) tick();
       }
     } else {
-      // Cold load → pick a random track.
-      const initialIdx = tracks.length > 1 ? Math.floor(Math.random() * tracks.length) : 0;
+      // Cold load. If any track has pinnedUntil set and it's still in the
+      // future (i.e., a recently-released spotlight track within its 30-day
+      // window), force that track. Otherwise fall back to random shuffle.
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const pinnedIdx = tracks.findIndex(
+        (t) => t.pinnedUntil && t.pinnedUntil >= todayISO,
+      );
+      const initialIdx =
+        pinnedIdx >= 0
+          ? pinnedIdx
+          : tracks.length > 1
+          ? Math.floor(Math.random() * tracks.length)
+          : 0;
       loadTrack(initialIdx, false);
     }
   }

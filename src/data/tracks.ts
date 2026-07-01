@@ -13,6 +13,10 @@ export interface Track {
   lore: string;
   /** Optional one-line tagline used as the subtitle */
   note?: string;
+  /** Optional YYYY-MM-DD. While today <= this date, cold page loads always
+   *  start with this track (skipping the random-shuffle). Used for the new-
+   *  release spotlight window (typically release date + 30 days). */
+  pinnedUntil?: string;
 }
 
 /**
@@ -23,6 +27,17 @@ export interface Track {
  * Spotify track IDs scraped from open.spotify.com/embed/artist/0l1iVFMMyljzebyWCPLgHV (2026-05-20).
  */
 export const tracks: Track[] = [
+  {
+    title: 'Thousand Reasons',
+    releaseDate: '2026-06-30',
+    spotifyId: '2LTgiyRRwhz4qeq52q2stU',
+    audioSrc: '/audio/Thousand Reasons - Psychosassquatch.mp3',
+    cover: '/covers/ThousandReasons.jpg',
+    // Pinned as the cold-load default through 2026-07-30 (release + 30 days).
+    // After that date the initial-track logic falls back to random shuffle.
+    pinnedUntil: '2026-07-30',
+    lore: 'Lore pending — interview not started.',
+  },
   {
     title: 'Oni',
     releaseDate: '2022-10-31',
